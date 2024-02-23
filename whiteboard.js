@@ -1,40 +1,53 @@
-const { Client } = require('@opensearch-project/opensearch');
-const https = require('https');
+import { Client } from '@opensearch-project/opensearch';
+import fs from 'fs';
+import csv from 'csv-parser';
+import { Readable, Writable } from 'stream';
 
-// Replace 'sample.com' with your actual host, and 'adminuser', 'pwd' with actual authentication details
-const osearch = new Client({
-  node: 'https://sample.com',
-  auth: {
-    username: 'adminuser',
-    password: 'pwd'
-  },
-  ssl: {
-    // This is necessary if your OpenSearch uses a self-signed certificate.
-    // For production, you should use a certificate signed by a CA and possibly remove this line.
-    rejectUnauthorized: false 
-  }
+const client = new Client({
+  node: 'http://localhost:9200', // Adjust this to your OpenSearch cluster
 });
 
-// Update aliases by removing and then creating a new index
-async function updateAliases() {
+const ALIAS_NAME = 'your-alias-name'; // The alias to rollover
+const INDEX_NAME_PREFIX = 'your-index-prefix-'; // Prefix for new indices
+const CHUNK_SIZE = 1000; // Number of documents to index in each bulk request
+
+async function rolloverIfNeeded(client: Client, aliasName: string) {
   try {
-    // Remove alias
-    await osearch.indices.updateAliases({
+    const response = await client.indices.rollover({
+      alias: aliasName,
       body: {
-        actions: [
-          { remove: { index: 'xyz-data*', alias: 'xyz-current-data' } }
-        ]
-      }
+        conditions: {
+          max_age: '7d', // Adjust rollover conditions as needed
+          max_docs: 1000000,
+        },
+      },
     });
 
-    // Create new index with current date
-    const indexName = 'xyz-data-' + new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    await osearch.indices.create({ index: indexName });
-
-    console.log(`Index ${indexName} created successfully.`);
+    console.log('Rollover response:', response);
+    return response;
   } catch (error) {
-    console.error('Error updating aliases:', error);
+    console.error('An error occurred during the rollover operation:', error);
+    throw error;
   }
 }
 
-updateAliases();
+function createBulkInsertStream(client: Client, indexName: string, chunkSize: number) {
+  let buffer: any[] = [];
+
+  const flushBuffer = async () => {
+    const body = buffer.flatMap(doc => [{ index: { _index: indexName } }, doc]);
+    await client.bulk({ refresh: true, body });
+    buffer = [];
+  };
+
+  return new Writable({
+    objectMode: true,
+    async write(doc, encoding, callback) {
+      buffer.push(doc);
+      if (buffer.length >= chunkSize) {
+        await flushBuffer();
+      }
+      callback();
+    },
+    async final(callback) {
+      if (buffer.length
