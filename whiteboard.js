@@ -1,35 +1,34 @@
-const { Client } = require('@opensearch-project/opensearch');
-const fs = require('fs');
-const csvParser = require('csv-parser');
-const readline = require('readline');
+import { Client } from '@opensearch-project/opensearch';
+import * as fs from 'fs';
+import { createInterface } from 'readline';
 
 class CSVToOpenSearch {
-  constructor(opensearchConfig, filePath) {
+  private client: Client;
+  private filePath: string;
+
+  constructor(opensearchConfig: { node: string }, filePath: string) {
     this.client = new Client(opensearchConfig);
     this.filePath = filePath;
   }
 
-  async *generateDocuments(indexName) {
+  async *generateDocuments(indexName: string): AsyncGenerator<any, void, undefined> {
     const fileStream = fs.createReadStream(this.filePath);
-    const rl = readline.createInterface({
+    const rl = createInterface({
       input: fileStream,
-      crlfDelay: Infinity
+      crlfDelay: Infinity,
     });
 
     for await (const line of rl) {
-      // Assuming each line is a CSV with two values: startip, endip
       const [startip, endip] = line.split(','); // Adjust based on your CSV format
 
-      // Skip empty lines or lines that don't match expected format
       if (startip && endip) {
-        // Yield an action and a document for each line
         yield { index: { _index: indexName } };
         yield { startip, endip };
       }
     }
   }
 
-  async bulkInsert(indexName) {
+  async bulkInsert(indexName: string): Promise<void> {
     const documentsGenerator = this.generateDocuments(indexName);
 
     try {
@@ -51,7 +50,6 @@ class CSVToOpenSearch {
 // Usage example
 const opensearchConfig = {
   node: 'http://localhost:9200', // Your OpenSearch node URL
-  // Add other authentication or configuration details as needed
 };
 
 const filePath = 'path/to/your/csv/file.csv';
