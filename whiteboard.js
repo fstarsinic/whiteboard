@@ -1,53 +1,40 @@
-import { Client } from '@opensearch-project/opensearch';
 import fs from 'fs';
-import csv from 'csv-parser';
-import { Readable, Writable } from 'stream';
+import readline from 'readline';
 
-const client = new Client({
-  node: 'http://localhost:9200', // Adjust this to your OpenSearch cluster
-});
+class LargeFileProcessor {
+  private filePath: string;
 
-const ALIAS_NAME = 'your-alias-name'; // The alias to rollover
-const INDEX_NAME_PREFIX = 'your-index-prefix-'; // Prefix for new indices
-const CHUNK_SIZE = 1000; // Number of documents to index in each bulk request
+  constructor(filePath: string) {
+    this.filePath = filePath;
+  }
 
-async function rolloverIfNeeded(client: Client, aliasName: string) {
-  try {
-    const response = await client.indices.rollover({
-      alias: aliasName,
-      body: {
-        conditions: {
-          max_age: '7d', // Adjust rollover conditions as needed
-          max_docs: 1000000,
-        },
-      },
+  public async processFile() {
+    const fileStream = fs.createReadStream(this.filePath);
+    const rl = readline.createInterface({
+      input: fileStream,
+      crlfDelay: Infinity,
     });
 
-    console.log('Rollover response:', response);
-    return response;
-  } catch (error) {
-    console.error('An error occurred during the rollover operation:', error);
-    throw error;
+    let lineNumber = 0;
+
+    for await (const line of rl) {
+      lineNumber++;
+      // Process the line here
+      // For example, you could do something with the line
+
+      if (lineNumber % 1000 === 0) {
+        console.log(`Processed ${lineNumber} lines`);
+      }
+    }
+
+    console.log(`File processing complete. Total lines processed: ${lineNumber}`);
   }
 }
 
-function createBulkInsertStream(client: Client, indexName: string, chunkSize: number) {
-  let buffer: any[] = [];
+// Usage example:
+const filePath = 'path/to/your/large/file.txt';
+const processor = new LargeFileProcessor(filePath);
 
-  const flushBuffer = async () => {
-    const body = buffer.flatMap(doc => [{ index: { _index: indexName } }, doc]);
-    await client.bulk({ refresh: true, body });
-    buffer = [];
-  };
-
-  return new Writable({
-    objectMode: true,
-    async write(doc, encoding, callback) {
-      buffer.push(doc);
-      if (buffer.length >= chunkSize) {
-        await flushBuffer();
-      }
-      callback();
-    },
-    async final(callback) {
-      if (buffer.length
+processor.processFile()
+  .then(() => console.log('File has been processed successfully.'))
+  .catch(error => console.error('An error occurred during file processing:', error));
