@@ -8,19 +8,27 @@ class LargeFileProcessor {
     this.filePath = filePath;
   }
 
-  public async processFile() {
+  // Asynchronous generator method to yield each line of the file
+  async *lines(): AsyncGenerator<string, void, unknown> {
     const fileStream = fs.createReadStream(this.filePath);
     const rl = readline.createInterface({
       input: fileStream,
       crlfDelay: Infinity,
     });
 
+    for await (const line of rl) {
+      yield line;
+    }
+  }
+
+  public async processFile() {
     let lineNumber = 0;
 
-    for await (const line of rl) {
+    // Using the generator to process each line
+    for await (const line of this.lines()) {
       lineNumber++;
       // Process the line here
-      // For example, you could do something with the line
+      // For example, you might want to do something specific with the line
 
       if (lineNumber % 1000 === 0) {
         console.log(`Processed ${lineNumber} lines`);
