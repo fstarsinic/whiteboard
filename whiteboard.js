@@ -1,80 +1,56 @@
-class MyClass {
-    async method1() {
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
+function bulkInsert(data) {
+    return new Promise((resolve, reject) => {
+        // Example using Elasticsearch/OpenSearch client
+        // Replace with your actual bulk insert logic
+        esClient.bulk({ body: data }, (err, result) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(result);
+            }
+        });
+    });
+}
+
+
+
+
+async function processGeneratorAsync(generator) {
+    return new Promise(async (resolve, reject) => {
+        const iterator = generator();
+
+        const processNext = async (result) => {
+            if (result.done) {
+                resolve(); // Resolve the promise when generator is done
+            } else {
                 try {
-                    // Simulate an operation that might fail
-                    const operation = () => {
-                        // Simulate condition for success or failure
-                        const success = true; // Change to false to simulate an error
-                        if (!success) {
-                            throw new Error('Operation failed in Method 1');
-                        }
-                        return 'Result of successful operation in Method 1';
-                    };
+                    // Await the asynchronous bulk insert operation
+                    await bulkInsert(result.value); // Assume result.value is the data for bulk insert
+                    console.log('Bulk insert complete for a chunk');
 
-                    // Assuming the operation is successful
-                    const result = operation();
-                    console.log('Method 1 completed');
-                    resolve(result);
+                    // Proceed to the next item
+                    processNext(iterator.next());
                 } catch (error) {
-                    console.log('Method 1 encountered an error');
-                    reject(error.message);
+                    reject(error); // Reject the promise on error
                 }
-            }, 1000); // Simulate async work with a delay
-        });
-    }
+            }
+        };
 
-    async method2() {
-        // Existing implementation...
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                const success = true; // Change to false to simulate failure
-                if (success) {
-                    console.log('Method 2 completed');
-                    resolve('Result of Method 2');
-                } else {
-                    reject('Method 2 failed');
-                }
-            }, 1000); // Wait for 1 second
-        });
-    }
-
-    async method3() {
-        // Existing implementation...
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                const success = true; // Change to false to simulate failure
-                if (success) {
-                    console.log('Method 3 completed');
-                    resolve('Result of Method 3');
-                } else {
-                    reject('Method 3 failed');
-                }
-            }, 1000); // Wait for 1 second
-        });
-    }
+        // Start processing
+        processNext(iterator.next());
+    });
 }
 
-// Main execution function with try/catch block as previously shown
-async function main() {
-    const myClassInstance = new MyClass();
-    
-    try {
-        const result1 = await myClassInstance.method1();
-        console.log(result1); // Logs the result of method1
 
-        const result2 = await myClassInstance.method2();
-        console.log(result2); // Logs the result of method2
 
-        const result3 = await myClassInstance.method3();
-        console.log(result3); // Logs the result of method3
-    } catch (error) {
-        // Handle any errors/rejections here
-        console.error('An error occurred:', error);
-    }
+function* myDataGenerator() {
+    // Yield data chunks for bulk insert
+    yield [...]; // Replace [...] with your actual data chunk
+    // Yield more data as needed
 }
 
-// Call the main function to execute
-main();
+processGeneratorAsync(myDataGenerator)
+    .then(() => console.log('All bulk inserts complete'))
+    .catch(error => console.error('Bulk insert failed:', error));
+
 
