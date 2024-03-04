@@ -1,56 +1,27 @@
-function bulkInsert(data) {
-    return new Promise((resolve, reject) => {
-        // Example using Elasticsearch/OpenSearch client
-        // Replace with your actual bulk insert logic
-        esClient.bulk({ body: data }, (err, result) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(result);
-            }
-        });
+const fs = require('fs');
+const path = require('path');
+const yaml = require('js-yaml');
+
+function findYamlFilesAndKeys(directory, result = []) {
+    const filesAndDirs = fs.readdirSync(directory, { withFileTypes: true });
+
+    filesAndDirs.forEach(dirent => {
+        const fullPath = path.join(directory, dirent.name);
+        if (dirent.isDirectory()) {
+            findYamlFilesAndKeys(fullPath, result); // Recursively search in directories
+        } else if (path.extname(dirent.name) === '.yaml') {
+            const fileContents = fs.readFileSync(fullPath, 'utf8');
+            const yamlContents = yaml.load(fileContents);
+            const topKeys = Object.keys(yamlContents).join(', '); // Get top-level keys and join them
+            result.push(`${fullPath}: ${topKeys}`);
+        }
     });
+
+    return result;
 }
 
+// Replace 'yourStartDirectory' with the path of your directory
+const startDirectory = 'yourStartDirectory'; 
+const yamlFilesAndKeys = findYamlFilesAndKeys(startDirectory);
 
-
-
-async function processGeneratorAsync(generator) {
-    return new Promise(async (resolve, reject) => {
-        const iterator = generator();
-
-        const processNext = async (result) => {
-            if (result.done) {
-                resolve(); // Resolve the promise when generator is done
-            } else {
-                try {
-                    // Await the asynchronous bulk insert operation
-                    await bulkInsert(result.value); // Assume result.value is the data for bulk insert
-                    console.log('Bulk insert complete for a chunk');
-
-                    // Proceed to the next item
-                    processNext(iterator.next());
-                } catch (error) {
-                    reject(error); // Reject the promise on error
-                }
-            }
-        };
-
-        // Start processing
-        processNext(iterator.next());
-    });
-}
-
-
-
-function* myDataGenerator() {
-    // Yield data chunks for bulk insert
-    yield [...]; // Replace [...] with your actual data chunk
-    // Yield more data as needed
-}
-
-processGeneratorAsync(myDataGenerator)
-    .then(() => console.log('All bulk inserts complete'))
-    .catch(error => console.error('Bulk insert failed:', error));
-
-
+console.log(yamlFilesAndKeys);
