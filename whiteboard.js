@@ -1,29 +1,46 @@
-const fs = require('fs');
-const path = require('path');
-const yaml = require('js-yaml');
+const { Client } = require('@opensearch-project/opensearch');
+const fs = require('fs-extra');
+const glob = require('glob-promise');
 
-function convertYamlToJson(directory) {
-    const filesAndDirs = fs.readdirSync(directory, { withFileTypes: true });
+// Initialize OpenSearch client
+const client = new Client({
+  node: 'yourOpensearchHost',
+  auth: {
+    username: 'yourUsername',
+    password: 'yourPassword',
+  },
+});
 
-    filesAndDirs.forEach(dirent => {
-        const fullPath = path.join(directory, dirent.name);
-        if (dirent.isDirectory()) {
-            // Recursively process directories
-            convertYamlToJson(fullPath);
-        } else if (path.extname(dirent.name) === '.yaml') {
-            // Read and parse the YAML file
-            const yamlContent = fs.readFileSync(fullPath, 'utf8');
-            const jsonContent = yaml.load(yamlContent);
-
-            // Convert to JSON and save with .yaml.json extension
-            const jsonFilePath = `${fullPath}.json`;
-            fs.writeFileSync(jsonFilePath, JSON.stringify(jsonContent, null, 2), 'utf8');
-
-            console.log(`Converted: ${jsonFilePath}`);
-        }
+// Function to insert a single document into the OpenSearch database
+async function insertDocument(filePath) {
+  try {
+    const content = await fs.readJson(filePath);
+    const response = await client.index({
+      index: 'nuclei',
+      body: content,
+      refresh: true, // Ensure that documents are indexed immediately for the sake of the example
     });
+
+    console.log(`Document from '${filePath}' has been indexed. Response ID: ${response.body._id}`);
+  } catch (error) {
+    console.error(`Error inserting document from '${filePath}':`, error);
+  }
+}
+
+// Function to find and insert documents from .yaml.json files
+async function insertDocumentsFromYamlJsonFiles(startPath) {
+  try {
+    // Find all .yaml.json files in the directory and subdirectories
+    const files = await glob(`${startPath}/**/*.yaml.json`);
+
+    for (let file of files) {
+      await insertDocument(file); // Call insertDocument for each file
+    }
+  } catch (error) {
+    console.error('An error occurred while searching for files:', error);
+  }
 }
 
 // Replace 'yourStartDirectory' with the path of your directory
-const startDirectory = 'yourStartDirectory'; // Replace this with your actual directory path
-convertYamlToJson(startDirectory);
+const startDirectory = 'yourStartDirectory';
+insertDocumentsFromYamlJsonFiles(startDirectory);
