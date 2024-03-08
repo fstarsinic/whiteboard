@@ -1,41 +1,41 @@
-[
-  'vcard',
-  [
-    [ 'version', {}, 'text', '4.0' ],
-    [ 'fn', {}, 'text', 'HGC Global Communications Limited' ],
-    [ 'kind', {}, 'text', 'org' ],
-    [ 'adr', [Object], 'text', [Array] ],
-    [ 'tel', [Object], 'text', '+852-2128-2828' ],
-    [ 'tel', [Object], 'text', '+852-2128-3388' ],
-    [ 'email', {}, 'text', 'CHARLESLWH@hgc.com.hk' ]
-  ],
-  'vcard',
-  [
-    [ 'version', {}, 'text', '4.0' ],
-    [ 'fn', {}, 'text', 'Allan Yuen' ],
-    [ 'kind', {}, 'text', 'individual' ],
-    [ 'adr', [Object], 'text', [Array] ],
-    [ 'tel', [Object], 'text', '+852-2128-3904' ],
-    [ 'tel', [Object], 'text', '+852-2123-1204' ],
-    [ 'email', {}, 'text', 'allany@hthk.com' ]
-  ],
-  'vcard',
-  [
-    [ 'version', {}, 'text', '4.0' ],
-    [ 'fn', {}, 'text', 'IRT-HUTCHISON-HK' ],
-    [ 'kind', {}, 'text', 'group' ],
-    [ 'adr', [Object], 'text', [Array] ],
-    [ 'email', {}, 'text', 'abuse@on-nets.com' ],
-    [ 'email', [Object], 'text', 'abuse@on-nets.com' ]
-  ],
-  'vcard',
-  [
-    [ 'version', {}, 'text', '4.0' ],
-    [ 'fn', {}, 'text', 'Alpha Lau' ],
-    [ 'kind', {}, 'text', 'individual' ],
-    [ 'adr', [Object], 'text', [Array] ],
-    [ 'tel', [Object], 'text', '+852 2123 3983' ],
-    [ 'tel', [Object], 'text', '+852 2123 1206' ],
-    [ 'email', {}, 'text', 'alphal@hthk.com' ]
-  ]
-]
+function processVcards(vcards: any[]): any[][] {
+  // Filter out the 'vcard' strings to get only the vcard arrays
+  const filteredVcards: VCard[] = vcards.filter((item, index) => index % 2 !== 0) as VCard[];
+
+  // Find all unique keys (assuming the first element in each entry is the key)
+  const allKeys = new Set<string>();
+  filteredVcards.forEach(vcard => {
+    vcard.forEach(([key]) => allKeys.add(key));
+  });
+
+  // Convert Set to array for headers
+  const headers = Array.from(allKeys);
+
+  // Initialize result with headers
+  const result: any[][] = [headers];
+
+  // Process each vcard to create rows
+  filteredVcards.forEach(vcard => {
+    const row: (string | string[])[] = new Array(headers.length).fill('');
+
+    vcard.forEach(([key, , , value]) => {
+      const columnIndex = headers.indexOf(key);
+      if (row[columnIndex] === '') {
+        // First entry for this key
+        row[columnIndex] = typeof value === 'string' ? value : JSON.stringify(value);
+      } else {
+        // Subsequent entry, handle as array or concatenate
+        if (Array.isArray(row[columnIndex])) {
+          row[columnIndex].push(typeof value === 'string' ? value : JSON.stringify(value));
+        } else {
+          // Convert to array
+          row[columnIndex] = [row[columnIndex], typeof value === 'string' ? value : JSON.stringify(value)];
+        }
+      }
+    });
+
+    result.push(row);
+  });
+
+  return result;
+}
