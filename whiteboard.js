@@ -1,75 +1,97 @@
-import json
-import os
-import time
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
-def writeJson(filenames, path_of_the_directory):
-    for filename in filenames:
-        print(filename)
-        fn = f'{path_of_the_directory}{os.sep}{filename}'
-        print(f'{fn} is being processed')
-        try:
-            if not os.path.exists(fn):
-                print(f'{fn} file does not exist')
-                continue
-            with open(fn, 'r') as f:
-                print(filename)
-                time.sleep(1)
-                data = json.loads(f.read())
-                if data is not None:
-                    d = {"AS": data["handle"]}
-                    entities = data.get("entities", [])
-                    jsonList = []
-                    for entity in entities:
-                        for vcard in entity.get("vcardArray", []):
-                            if vcard:
-                                jsonList.append(vcard)
+async function writeJson(filenames: string[], pathOfTheDirectory: string): Promise<void> {
+  for (const filename of filenames) {
+    console.log(filename);
+    const fn = path.join(pathOfTheDirectory, filename);
+    console.log(`${fn} is being processed`);
+    try {
+      try {
+        await fs.access(fn);
+      } catch (error) {
+        console.log(`${fn} file does not exist`);
+        continue;
+      }
 
-                    phone = []
-                    for m in jsonList:
-                        if isinstance(m[1], list):
-                            for l in m[1]:
-                                if "fn" in l:
-                                    d["org"] = l[3]
-                                if "tel" in l:
-                                    phone.append(l[3])
-                                    d["phone"] = phone
-                                if "email" in l:
-                                    d["email"] = l[3]
-                                if "adr" in l:
-                                    if l[1]:
-                                        d["address"] = l[1].get("label", "")
-                                    else:
-                                        d["address"] = ' '.join((str(n) for n in l[3]))
+      const rawData = await fs.readFile(fn, { encoding: 'utf8' });
+      const data = JSON.parse(rawData);
+      if (data !== null) {
+        const d: any = { "AS": data["handle"] };
+        const entities = data["entities"] ?? [];
+        const jsonList: any[] = [];
 
-                    entities_data = []
-                    for entity in entities:
-                        ind = {}
-                        if "vcardArray" in entity:
-                            for vcard in entity["vcardArray"]:
-                                if isinstance(vcard[1], list):
-                                    for item in vcard[1]:
-                                        if "fn" in item:
-                                            ind["name"] = item[3]
-                                        if "adr" in item:
-                                            ind["address"] = item[1].get("label", ' '.join(str(n) for n in item[3]))
-                                        if "email" in item:
-                                            ind["email"] = item[3]
-                                        if "tel" in item:
-                                            ind["phone"] = [item[3]]
-                        if "roles" in entity:
-                            ind["type"] = entity["roles"][0]
-                        if ind:
-                            entities_data.append(ind)
+        entities.forEach((entity: any) => {
+          entity["vcardArray"]?.forEach((vcard: any) => {
+            if (vcard) {
+              jsonList.push(vcard);
+            }
+          });
+        });
 
-                    d["entities"] = entities_data
+        const phone: string[] = [];
+        jsonList.forEach(m => {
+          if (Array.isArray(m[1])) {
+            m[1].forEach((l: any) => {
+              if (l.includes("fn")) {
+                d["org"] = l[3];
+              }
+              if (l.includes("tel")) {
+                phone.push(l[3]);
+                d["phone"] = phone;
+              }
+              if (l.includes("email")) {
+                d["email"] = l[3];
+              }
+              if (l.includes("adr")) {
+                d["address"] = Array.isArray(l[1]) ? l[1].join(' ') : l[3];
+              }
+            });
+          }
+        });
 
-                    with open(f'output_json/{filename}', 'w') as outfile:
-                        json.dump(d, outfile, indent=4)
-        except Exception as e:
-            print(f"Error in {filename}")
-            print(e)
+        const entitiesData: any[] = [];
+        entities.forEach((entity: any) => {
+          const ind: any = {};
+          if (entity["vcardArray"]) {
+            entity["vcardArray"].forEach((vcard: any) => {
+              if (Array.isArray(vcard[1])) {
+                vcard[1].forEach((item: any) => {
+                  if (item.includes("fn")) {
+                    ind["name"] = item[3];
+                  }
+                  if (item.includes("adr")) {
+                    ind["address"] = item[3]; // Simplify for this example
+                  }
+                  if (item.includes("email")) {
+                    ind["email"] = item[3];
+                  }
+                  if (item.includes("tel")) {
+                    ind["phone"] = [item[3]];
+                  }
+                });
+              }
+            });
+          }
+          if (entity["roles"]) {
+            ind["type"] = entity["roles"][0];
+          }
+          if (Object.keys(ind).length > 0) {
+            entitiesData.push(ind);
+          }
+        });
 
-# Example usage
-path_of_the_directory = './raw_asn'
-filenames = ['example1.json', 'example2.json']
-writeJson(filenames, path_of_the_directory)
+        d["entities"] = entitiesData;
+
+        await fs.writeFile(path.join('output_json', filename), JSON.stringify(d, null, 2));
+      }
+    } catch (error) {
+      console.error(`Error in ${filename}`, error);
+    }
+  }
+}
+
+// Example usage
+const pathOfTheDirectory = './raw_asn';
+const filenames = ['example1.json', 'example2.json'];
+writeJson(filenames, pathOfTheDirectory).then(() => console.log('Done'));
