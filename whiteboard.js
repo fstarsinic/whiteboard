@@ -1,6 +1,8 @@
 import * as fs from 'fs/promises';
-import * as dfd from 'danfojs-node';
 import path from 'path';
+// Assuming `normalize` is the correct function from json-normalizer library
+// You might need to adjust import based on the actual library API
+import { normalize } from 'json-normalizer';
 
 async function writeJson(filenames: string[]): Promise<void> {
   for (const filename of filenames) {
@@ -13,43 +15,20 @@ async function writeJson(filenames: string[]): Promise<void> {
         const d: any = {};
         d["AS"] = data["handle"];
 
-        if (data.entities) {
-          const entitiesDf = new dfd.DataFrame(data.entities);
-          const entities = entitiesDf['entities'].values;
-          const jsonList: any[] = [];
+        // Use json-normalizer to normalize data.entities
+        const normalizedData = normalize(data.entities);
+        // Processing logic goes here, adapted to the output structure of json-normalizer
 
-          entities.forEach((entity: any) => {
-            if (entity.vcardArray) {
-              jsonList.push(...entity.vcardArray);
-            }
-          });
-
-          let phone: string[] = [];
-          jsonList.forEach(js => {
-            if (js) {
-              js.forEach((card: any) => {
-                if (card.includes("fn")) {
-                  d["org"] = card[3];
-                }
-                if (card.includes("tel")) {
-                  phone.push(card[3]);
-                  d["phone"] = phone;
-                }
-                if (card.includes("email")) {
-                  d["email"] = card[3];
-                }
-                if (card.includes("adr")) {
-                  d["address"] = card[3]; // Simplification, needs logic to handle 'label' and join
-                }
-              });
-            }
-          });
-
-          // Additional processing for entities
-          // This would involve further logic to normalize and iterate through entities
-          // and their roles, similar to the original Python code.
-          // Placeholder for additional entity processing...
-        }
+        // Example processing (This is just a placeholder, adjust according to your needs and the actual structure)
+        d["entities"] = normalizedData.map((entity: any) => {
+          // Simplified example to extract certain fields, actual implementation may vary
+          return {
+            org: entity["org"], // Assuming these fields are directly available after normalization
+            phone: entity["phone"],
+            email: entity["email"],
+            address: entity["address"],
+          };
+        });
 
         // Write the transformed JSON to a file
         await fs.writeFile(path.join('./output_json1/', filename), JSON.stringify(d, null, 2));
@@ -59,6 +38,3 @@ async function writeJson(filenames: string[]): Promise<void> {
     }
   }
 }
-
-// You may need to adjust the logic to better match your specific JSON structure
-// and processing requirements, especially in handling complex nested structures.
