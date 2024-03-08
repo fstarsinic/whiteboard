@@ -33,17 +33,18 @@ async function writeJson(filenames: string[], pathOfTheDirectory: string): Promi
         jsonList.forEach(m => {
           if (Array.isArray(m[1])) {
             m[1].forEach((l: any) => {
-              if (l.includes("fn")) {
+              // Check if l is an array before calling includes
+              if (Array.isArray(l) && l.includes("fn")) {
                 d["org"] = l[3];
               }
-              if (l.includes("tel")) {
+              if (Array.isArray(l) && l.includes("tel")) {
                 phone.push(l[3]);
                 d["phone"] = phone;
               }
-              if (l.includes("email")) {
+              if (Array.isArray(l) && l.includes("email")) {
                 d["email"] = l[3];
               }
-              if (l.includes("adr")) {
+              if (Array.isArray(l) && l.includes("adr")) {
                 d["address"] = Array.isArray(l[1]) ? l[1].join(' ') : l[3];
               }
             });
@@ -57,16 +58,16 @@ async function writeJson(filenames: string[], pathOfTheDirectory: string): Promi
             entity["vcardArray"].forEach((vcard: any) => {
               if (Array.isArray(vcard[1])) {
                 vcard[1].forEach((item: any) => {
-                  if (item.includes("fn")) {
+                  if (Array.isArray(item) && item.includes("fn")) {
                     ind["name"] = item[3];
                   }
-                  if (item.includes("adr")) {
+                  if (Array.isArray(item) && item.includes("adr")) {
                     ind["address"] = item[3]; // Simplify for this example
                   }
-                  if (item.includes("email")) {
+                  if (Array.isArray(item) && item.includes("email")) {
                     ind["email"] = item[3];
                   }
-                  if (item.includes("tel")) {
+                  if (Array.isArray(item) && item.includes("tel")) {
                     ind["phone"] = [item[3]];
                   }
                 });
@@ -80,8 +81,6 @@ async function writeJson(filenames: string[], pathOfTheDirectory: string): Promi
             entitiesData.push(ind);
           }
         });
-
-        d["entities"] = entitiesData;
 
         await fs.writeFile(path.join('output_json', filename), JSON.stringify(d, null, 2));
       }
