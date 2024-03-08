@@ -1,40 +1,42 @@
-import * as fs from 'fs/promises';
-import path from 'path';
-// Assuming `normalize` is the correct function from json-normalizer library
-// You might need to adjust import based on the actual library API
-import { normalize } from 'json-normalizer';
+type NormalizedResult = { [key: string]: any }[];
 
-async function writeJson(filenames: string[]): Promise<void> {
-  for (const filename of filenames) {
-    try {
-      console.log(filename);
-      const rawData = await fs.readFile(path.join('./raw_asn/', filename), { encoding: 'utf8' });
-      const data = JSON.parse(rawData);
+function normalizeJson(data: any, parentKey: string = '', result: NormalizedResult = []): NormalizedResult {
+  if (Array.isArray(data)) {
+    data.forEach((item) => normalizeJson(item, parentKey, result));
+  } else if (typeof data === 'object' && data !== null) {
+    const keys = Object.keys(data);
+    const flatObject: { [key: string]: any } = {};
 
-      if (data !== null) {
-        const d: any = {};
-        d["AS"] = data["handle"];
-
-        // Use json-normalizer to normalize data.entities
-        const normalizedData = normalize(data.entities);
-        // Processing logic goes here, adapted to the output structure of json-normalizer
-
-        // Example processing (This is just a placeholder, adjust according to your needs and the actual structure)
-        d["entities"] = normalizedData.map((entity: any) => {
-          // Simplified example to extract certain fields, actual implementation may vary
-          return {
-            org: entity["org"], // Assuming these fields are directly available after normalization
-            phone: entity["phone"],
-            email: entity["email"],
-            address: entity["address"],
-          };
-        });
-
-        // Write the transformed JSON to a file
-        await fs.writeFile(path.join('./output_json1/', filename), JSON.stringify(d, null, 2));
+    keys.forEach((key) => {
+      if (typeof data[key] === 'object' && data[key] !== null && !Array.isArray(data[key])) {
+        normalizeJson(data[key], parentKey + key + '.', result);
+      } else {
+        flatObject[parentKey + key] = data[key];
       }
-    } catch (error) {
-      console.error(`Error in ${filename}`, error);
+    });
+
+    if (Object.keys(flatObject).length > 0) {
+      result.push(flatObject);
     }
+  } else {
+    result.push({ [parentKey.slice(0, -1)]: data });
   }
+
+  return result;
 }
+
+// Usage example
+const exampleJson = {
+  id: 1,
+  name: "John Doe",
+  info: {
+    age: 30,
+    address: {
+      city: "New York",
+      country: "USA"
+    }
+  },
+  tags: ["developer", "javascript"]
+};
+
+console.log(normalizeJson(exampleJson));
