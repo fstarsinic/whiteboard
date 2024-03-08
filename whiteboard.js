@@ -1,44 +1,64 @@
-import fs from 'fs';
+import * as fs from 'fs/promises';
+import * as dfd from 'danfojs-node';
 import path from 'path';
-
-// Assuming a placeholder for JSON normalization similar to pandas json_normalize
-// You might need to implement or find a suitable library function for complex cases.
-function normalizeJson(json: any): any {
-  // Placeholder implementation - you will need to replace this with actual normalization logic
-  return json.entities?.map((entity: any) => entity.vcardArray) ?? [];
-}
 
 async function writeJson(filenames: string[]): Promise<void> {
   for (const filename of filenames) {
     try {
       console.log(filename);
-      const rawData = fs.readFileSync(path.join('./raw_asn/', filename), { encoding: 'utf8' });
+      const rawData = await fs.readFile(path.join('./raw_asn/', filename), { encoding: 'utf8' });
       const data = JSON.parse(rawData);
 
-      if (data) {
+      if (data !== null) {
         const d: any = {};
         d["AS"] = data["handle"];
-        const jsonList = normalizeJson(data);
 
-        // Other processing logic as per your Python script
-        // This part needs to be adapted based on how your JSON structure looks and what you actually need to extract
-        // For simplicity, this is a placeholder to indicate you would perform your transformations here
+        if (data.entities) {
+          const entitiesDf = new dfd.DataFrame(data.entities);
+          const entities = entitiesDf['entities'].values;
+          const jsonList: any[] = [];
 
-        // Example transformation
-        if (data["entities"]) {
-          d["entities"] = data["entities"].map((entity: any) => {
-            return {
-              name: entity["name"], // Assuming these fields exist
-              // Other fields as needed
-            };
+          entities.forEach((entity: any) => {
+            if (entity.vcardArray) {
+              jsonList.push(...entity.vcardArray);
+            }
           });
+
+          let phone: string[] = [];
+          jsonList.forEach(js => {
+            if (js) {
+              js.forEach((card: any) => {
+                if (card.includes("fn")) {
+                  d["org"] = card[3];
+                }
+                if (card.includes("tel")) {
+                  phone.push(card[3]);
+                  d["phone"] = phone;
+                }
+                if (card.includes("email")) {
+                  d["email"] = card[3];
+                }
+                if (card.includes("adr")) {
+                  d["address"] = card[3]; // Simplification, needs logic to handle 'label' and join
+                }
+              });
+            }
+          });
+
+          // Additional processing for entities
+          // This would involve further logic to normalize and iterate through entities
+          // and their roles, similar to the original Python code.
+          // Placeholder for additional entity processing...
         }
 
         // Write the transformed JSON to a file
-        fs.writeFileSync(path.join('./output_json1/', filename), JSON.stringify(d));
+        await fs.writeFile(path.join('./output_json1/', filename), JSON.stringify(d, null, 2));
       }
     } catch (error) {
       console.error(`Error in ${filename}`, error);
     }
   }
 }
+
+// You may need to adjust the logic to better match your specific JSON structure
+// and processing requirements, especially in handling complex nested structures.
