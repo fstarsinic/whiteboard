@@ -1,41 +1,44 @@
-function processVcards(vcards: any[]): any[][] {
-  // Filter out the 'vcard' strings to get only the vcard arrays
-  const filteredVcards: VCard[] = vcards.filter((item, index) => index % 2 !== 0) as VCard[];
+import fetch from 'node-fetch';
+import jsonata from 'jsonata';
 
-  // Find all unique keys (assuming the first element in each entry is the key)
-  const allKeys = new Set<string>();
-  filteredVcards.forEach(vcard => {
-    vcard.forEach(([key]) => allKeys.add(key));
-  });
-
-  // Convert Set to array for headers
-  const headers = Array.from(allKeys);
-
-  // Initialize result with headers
-  const result: any[][] = [headers];
-
-  // Process each vcard to create rows
-  filteredVcards.forEach(vcard => {
-    const row: (string | string[])[] = new Array(headers.length).fill('');
-
-    vcard.forEach(([key, , , value]) => {
-      const columnIndex = headers.indexOf(key);
-      if (row[columnIndex] === '') {
-        // First entry for this key
-        row[columnIndex] = typeof value === 'string' ? value : JSON.stringify(value);
-      } else {
-        // Subsequent entry, handle as array or concatenate
-        if (Array.isArray(row[columnIndex])) {
-          row[columnIndex].push(typeof value === 'string' ? value : JSON.stringify(value));
-        } else {
-          // Convert to array
-          row[columnIndex] = [row[columnIndex], typeof value === 'string' ? value : JSON.stringify(value)];
-        }
-      }
-    });
-
-    result.push(row);
-  });
-
-  return result;
+interface RegistrantInfo {
+  org?: string;
+  address?: string;
+  phone?: string;
 }
+
+async function queryRDAP(domain: string): Promise<RegistrantInfo> {
+  const rdapUrl = `https://rdap.verisign.com/com/v1/domain/${domain}`;
+
+  try {
+    const response = await fetch(rdapUrl);
+    const data = await response.json();
+
+    // JSONata query to extract registrant information
+    const expression = jsonata(`
+      entities[roles='registrant'].{
+        "org": legalEntity.name,
+        "address": vcardArray[1][[0]='adr'].[3][][][],  // Adjust based on actual structure
+        "phone": vcardArray[1][[0]='tel'].[3]
+      }
+    `);
+
+    const result: RegistrantInfo = expression.evaluate(data);
+    
+    // Assuming single registrant and flattening the structure for simplicity
+    return {
+      org: result?.org,
+      address: result?.address?.join(' '), // Join address parts if it's an array
+      phone: result?.phone
+    };
+
+  } catch (error) {
+    console.error("Error querying RDAP:", error);
+    return {};
+  }
+}
+
+// Example usage
+queryRDAP('example.com').then(registrantInfo => {
+  console.log(registrantInfo);
+});
