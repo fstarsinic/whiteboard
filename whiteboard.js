@@ -1,44 +1,37 @@
-import fetch from 'node-fetch';
-import jsonata from 'jsonata';
+import { readdir, readFile } from 'fs/promises';
+import { join } from 'path';
+import { Client } from '@opensearch-project/opensearch'; // Assume this is your OpenSearch client library
 
-interface RegistrantInfo {
-  org?: string;
-  address?: string;
-  phone?: string;
-}
+class YourOpenSearchClass {
+  private client: Client;
 
-async function queryRDAP(domain: string): Promise<RegistrantInfo> {
-  const rdapUrl = `https://rdap.verisign.com/com/v1/domain/${domain}`;
+  constructor(client: Client) {
+    this.client = client;
+  }
 
-  try {
-    const response = await fetch(rdapUrl);
-    const data = await response.json();
+  async insertBulkFromFilePath(pathToFiles: string, indexName: string): Promise<void> {
+    try {
+      const files = await readdir(pathToFiles);
+      const bulkBody: string[] = [];
 
-    // JSONata query to extract registrant information
-    const expression = jsonata(`
-      entities[roles='registrant'].{
-        "org": legalEntity.name,
-        "address": vcardArray[1][[0]='adr'].[3][][][],  // Adjust based on actual structure
-        "phone": vcardArray[1][[0]='tel'].[3]
+      for (const file of files) {
+        const filePath = join(pathToFiles, file);
+        const document = await readFile(filePath, { encoding: 'utf-8' });
+        const action = { index: { _index: indexName } };
+
+        bulkBody.push(JSON.stringify(action));
+        bulkBody.push(document);
       }
-    `);
 
-    const result: RegistrantInfo = expression.evaluate(data);
-    
-    // Assuming single registrant and flattening the structure for simplicity
-    return {
-      org: result?.org,
-      address: result?.address?.join(' '), // Join address parts if it's an array
-      phone: result?.phone
-    };
+      const { body } = await this.client.bulk({ body: bulkBody.join('\n') + '\n' });
 
-  } catch (error) {
-    console.error("Error querying RDAP:", error);
-    return {};
+      if (body.errors) {
+        console.error('Bulk insert had errors', body.errors);
+      } else {
+        console.log('Successfully inserted documents');
+      }
+    } catch (error) {
+      console.error('Failed to insert documents', error);
+    }
   }
 }
-
-// Example usage
-queryRDAP('example.com').then(registrantInfo => {
-  console.log(registrantInfo);
-});
