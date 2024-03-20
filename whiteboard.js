@@ -1,48 +1,73 @@
-import { readdir, readFile } from 'fs/promises';
-import { join } from 'path';
-import { Client } from '@opensearch-project/opensearch'; // Adjust import according to your OpenSearch client
+const pino = require('pino');
+const moment = require('moment');
+const log = pino({});
 
-class YourOpenSearchClass {
-  private client: Client;
-
-  constructor(client: Client) {
-    this.client = client;
-  }
-
-  async insertBulkFromFilePath(pathToFiles: string, indexName: string, batchSize: number): Promise<void> {
-    try {
-      const files = await readdir(pathToFiles);
-      for (let i = 0; i < files.length; i += batchSize) {
-        const batchFiles = files.slice(i, i + batchSize);
-        const bulkBody: string[] = [];
-
-        for (const file of batchFiles) {
-          const filePath = join(pathToFiles, file);
-          // Ensure the document content is correctly formatted as JSON
-          const documentContent = await readFile(filePath, { encoding: 'utf-8' });
-          try {
-            // Parse and re-stringify the document content to ensure it's valid JSON and correctly formatted
-            const document = JSON.stringify(JSON.parse(documentContent));
-            const action = { index: { _index: indexName } };
-            bulkBody.push(JSON.stringify(action));
-            bulkBody.push(document);
-          } catch (error) {
-            console.error(`Error processing file: ${filePath}`, error);
-            // Consider how you want to handle this error. Continue, break, return, etc.
-            continue; // For now, we'll skip this file and continue with the next
-          }
+log.customError = (error, details = '', LogLevel = process.env.LOG_LEVEL) => {
+  // We can manage universal data using globals
+  const req = global.reqInfo;
+  // The error is parsed in a new Error(error: the error passed to this function)
+  const e = new Error(error);
+  // The error frame from origin error's stack
+  const frame = e.stack.split('\n')[2];
+  // the function where the error occured
+  const functionName = frame.split(' ')[5];
+  // The exact line number
+  const lineNumber = frame.split(':').reverse()[1];
+  // The final object to be logged in the console
+  const errorInfo = {
+    // If we have a request object then parse it otherwise it is null
+    reqInfo: req
+      ? {
+          req: {
+            req: req.method,
+            path: req.path,
+            body: req.body,
+            query: req.query,
+          },
+          // If a req has a property with key user then extract relevant information otherwise return null
+          user: req.user
+            ? {
+                id: req.user.id,
+                name: req.user.name,
+              }
+            : null,
+          // The server information at the moment of error handling
+          server: {
+            ip: req.ip,
+            servertime: moment().format('YYYY-MM-DD HH:mm:ss'),
+          },
         }
-
-        const { body } = await this.client.bulk({ body: bulkBody.join('\n') + '\n' });
-
-        if (body.errors) {
-          console.error('Bulk insert had errors in batch', Math.floor(i / batchSize), body.errors);
-        } else {
-          console.log('Successfully inserted batch', Math.floor(i / batchSize));
-        }
-      }
-    } catch (error) {
-      console.error('Failed to insert documents', error);
-    }
+      : null,
+    functionName,
+    lineNumber,
+    // Assuming that error is occured in application layer and not the database end.
+    errorType: 'application error',
+    stack: error.stack || e.stack,
+    message: error.message || e.message,
+    env: process.env.NODE_ENV,
+    // defaults read from environment variable
+    logLevel: LogLevel,
+    process: details,
+  };
+  // Print appropriate level of log from [info, debug, warn, error]
+  switch (LogLevel) {
+    case 'info':
+      log.info(errorInfo);
+      break;
+    case 'debug':
+      log.debug(errorInfo);
+      break;
+    case 'warn':
+      log.warn(errorInfo);
+      break;
+    case 'error':
+      log.error(errorInfo);
+      break;
+    default:
+      log.error(errorInfo);
   }
-}
+};
+
+module.exports = {
+  log,
+};
