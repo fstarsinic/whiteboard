@@ -1,37 +1,60 @@
-const pino = require('pino');
-const moment = require('moment');
+import pino from 'pino';
+import moment from 'moment';
+
+// Assuming `global.reqInfo` type is defined somewhere globally. If not, define a type for it.
+// For demonstration, let's assume it looks something like this:
+interface ReqInfo {
+  method: string;
+  path: string;
+  body: any; // Replace `any` with a more specific type if possible
+  query: any; // Replace `any` with a more specific type if possible
+  user?: {
+    id: string;
+    name: string;
+  };
+  ip: string;
+}
+
+declare global {
+  namespace NodeJS {
+    interface Global {
+      reqInfo?: ReqInfo;
+    }
+  }
+}
+
 const log = pino({});
 
-log.customError = (error, details = '', LogLevel = process.env.LOG_LEVEL) => {
-  // We can manage universal data using globals
+interface CustomErrorFunction {
+  (
+    error: Error | string,
+    details?: string,
+    LogLevel?: string
+  ): void;
+}
+
+const customError: CustomErrorFunction = (error, details = '', LogLevel = process.env.LOG_LEVEL) => {
   const req = global.reqInfo;
-  // The error is parsed in a new Error(error: the error passed to this function)
-  const e = new Error(error);
-  // The error frame from origin error's stack
-  const frame = e.stack.split('\n')[2];
-  // the function where the error occured
+  const e = error instanceof Error ? error : new Error(error);
+  const frame = e.stack?.split('\n')[2] ?? '';
   const functionName = frame.split(' ')[5];
-  // The exact line number
   const lineNumber = frame.split(':').reverse()[1];
-  // The final object to be logged in the console
+  
   const errorInfo = {
-    // If we have a request object then parse it otherwise it is null
     reqInfo: req
       ? {
           req: {
-            req: req.method,
+            method: req.method,
             path: req.path,
             body: req.body,
             query: req.query,
           },
-          // If a req has a property with key user then extract relevant information otherwise return null
           user: req.user
             ? {
                 id: req.user.id,
                 name: req.user.name,
               }
             : null,
-          // The server information at the moment of error handling
           server: {
             ip: req.ip,
             servertime: moment().format('YYYY-MM-DD HH:mm:ss'),
@@ -40,16 +63,14 @@ log.customError = (error, details = '', LogLevel = process.env.LOG_LEVEL) => {
       : null,
     functionName,
     lineNumber,
-    // Assuming that error is occured in application layer and not the database end.
     errorType: 'application error',
-    stack: error.stack || e.stack,
-    message: error.message || e.message,
+    stack: e.stack,
+    message: e.message,
     env: process.env.NODE_ENV,
-    // defaults read from environment variable
     logLevel: LogLevel,
     process: details,
   };
-  // Print appropriate level of log from [info, debug, warn, error]
+  
   switch (LogLevel) {
     case 'info':
       log.info(errorInfo);
@@ -61,13 +82,17 @@ log.customError = (error, details = '', LogLevel = process.env.LOG_LEVEL) => {
       log.warn(errorInfo);
       break;
     case 'error':
-      log.error(errorInfo);
-      break;
     default:
       log.error(errorInfo);
   }
 };
 
-module.exports = {
-  log,
-};
+// Extending the logger instance with a custom function
+interface CustomLogger extends pino.Logger {
+  customError: CustomErrorFunction;
+}
+
+const extendedLog = log as CustomLogger;
+extendedLog.customError = customError;
+
+export { extendedLog as log };
