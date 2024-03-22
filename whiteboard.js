@@ -1,98 +1,128 @@
-import pino from 'pino';
-import moment from 'moment';
+import json
+import time
 
-// Assuming `global.reqInfo` type is defined somewhere globally. If not, define a type for it.
-// For demonstration, let's assume it looks something like this:
-interface ReqInfo {
-  method: string;
-  path: string;
-  body: any; // Replace `any` with a more specific type if possible
-  query: any; // Replace `any` with a more specific type if possible
-  user?: {
-    id: string;
-    name: string;
-  };
-  ip: string;
-}
+# Shared State Definition
+class SharedState:
+    def __init__(self):
+        self.counter = 0
+        self.previous_states = []
+        self.lastSleepDuration = 0
 
-declare global {
-  namespace NodeJS {
-    interface Global {
-      reqInfo?: ReqInfo;
-    }
+    def save_state(self):
+        self.previous_states.append({"counter": self.counter, "lastSleepDuration": self.lastSleepDuration})
+
+    def rollback(self):
+        if self.previous_states:
+            last_state = self.previous_states.pop()
+            self.counter = last_state["counter"]
+            self.lastSleepDuration = last_state["lastSleepDuration"]
+        else:
+            print("No previous state to rollback to.")
+
+# Module Definition
+class Module:
+    def __init__(self, name, action, **params):
+        self.name = name
+        self.action = action
+        self.params = params
+
+    def run(self, state):
+        return self.action(state, **self.params)
+
+# Action Functions
+def sleep_action(state, duration=1):
+    print(f"Sleeping for {duration} second(s).")
+    time.sleep(duration)
+    state.lastSleepDuration = duration
+    return "completed"
+
+def print_action(state, message=""):
+    print(message)
+    return "completed"
+
+# Workcase Definition
+class Workcase:
+    def __init__(self, name, modules, rules_file):
+        self.name = name
+        self.modules = modules
+        with open(rules_file, "r") as file:
+            self.rules = json.load(file)
+        self.state = SharedState()
+
+    def execute(self):
+        for module in self.modules:
+            result = module.run(self.state)
+            self.evaluate_rules(result)
+            print(f"Module {module.name} executed with result: {result}")
+
+    def evaluate_rules(self, result):
+        for rule in self.rules:
+            if eval(rule["condition"], {}, {"state": self.state.__dict__}):
+                print(f"Rule {rule['id']} triggered: {rule['action']}")
+                # Here, implement logic to handle the rule's action
+
+# Orchestrator Definition
+class SystemOrchestrator:
+    def __init__(self, workcases):
+        self.workcases = workcases
+
+    def execute(self):
+        for name, workcase in self.workcases.items():
+            print(f"Executing workcase: {name}")
+            workcase.execute()
+            print(f"Workcase {name} completed\n")
+
+# Example Usage
+if __name__ == "__main__":
+    # Define modules with parameters
+    sleep_module_short = Module("ShortSleep", sleep_action, duration=1)
+    sleep_module_long = Module("LongSleep", sleep_action, duration=5)
+    print_module = Module("Print", print_action, message="All done")
+
+    # Initialize workcases with modules and a path to the rules file
+    workcase1 = Workcase("Short Sleep Workcase", [sleep_module_short, print_module], "rules.json")
+    workcase2 = Workcase("Long Sleep Workcase", [sleep_module_long, print_module], "rules.json")
+
+    # Define the orchestrator with workcases
+    orchestrator = SystemOrchestrator({
+        "Workcase 1": workcase1,
+        "Workcase 2": workcase2
+    })
+
+    # Execute the orchestrator to run the workcases
+    orchestrator.execute()
+
+
+
+
+[
+  {
+    "id": "repeatSleep",
+    "condition": "sleepCounter < 10 && sleepCounter != 5",
+    "action": "repeat"
+  },
+  {
+    "id": "midwayCheckpoint",
+    "condition": "sleepCounter == 5",
+    "action": "transferAndReturn",
+    "targetModule": "midway"
+  },
+  {
+    "id": "proceedToFinal",
+    "condition": "sleepCounter >= 10",
+    "action": "next",
+    "nextModule": "finalStep"
+  },
+  {
+    "id": "handleSleepError",
+    "condition": "lastError == 'sleep'",
+    "action": "transfer",
+    "targetModule": "errorHandler"
+  },
+  {
+    "id": "handleOtherError",
+    "condition": "lastError != 'sleep' && lastError != ''",
+    "action": "continue"
   }
-}
+]
 
-const log = pino({});
-
-interface CustomErrorFunction {
-  (
-    error: Error | string,
-    details?: string,
-    LogLevel?: string
-  ): void;
-}
-
-const customError: CustomErrorFunction = (error, details = '', LogLevel = process.env.LOG_LEVEL) => {
-  const req = global.reqInfo;
-  const e = error instanceof Error ? error : new Error(error);
-  const frame = e.stack?.split('\n')[2] ?? '';
-  const functionName = frame.split(' ')[5];
-  const lineNumber = frame.split(':').reverse()[1];
-  
-  const errorInfo = {
-    reqInfo: req
-      ? {
-          req: {
-            method: req.method,
-            path: req.path,
-            body: req.body,
-            query: req.query,
-          },
-          user: req.user
-            ? {
-                id: req.user.id,
-                name: req.user.name,
-              }
-            : null,
-          server: {
-            ip: req.ip,
-            servertime: moment().format('YYYY-MM-DD HH:mm:ss'),
-          },
-        }
-      : null,
-    functionName,
-    lineNumber,
-    errorType: 'application error',
-    stack: e.stack,
-    message: e.message,
-    env: process.env.NODE_ENV,
-    logLevel: LogLevel,
-    process: details,
-  };
-  
-  switch (LogLevel) {
-    case 'info':
-      log.info(errorInfo);
-      break;
-    case 'debug':
-      log.debug(errorInfo);
-      break;
-    case 'warn':
-      log.warn(errorInfo);
-      break;
-    case 'error':
-    default:
-      log.error(errorInfo);
-  }
-};
-
-// Extending the logger instance with a custom function
-interface CustomLogger extends pino.Logger {
-  customError: CustomErrorFunction;
-}
-
-const extendedLog = log as CustomLogger;
-extendedLog.customError = customError;
-
-export { extendedLog as log };
