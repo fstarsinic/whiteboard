@@ -15,3 +15,22 @@ class Mediator {
     });
   }
 }
+
+
+
+
+class SubscriberOne {
+  update(eventData) {
+    console.log(`Subscriber One received event data: ${eventData}`);
+    // Handle the event data
+  }
+}
+
+class SubscriberTwo {
+  update(eventData) {
+    console.log(`Subscriber Two received event data: ${eventData}`);
+    // Handle the event data
+  }
+}
+
+// Add more subscribers as needed
