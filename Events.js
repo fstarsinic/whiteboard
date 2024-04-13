@@ -30,6 +30,10 @@ abstract class Processor {
     }
 
     abstract execute(): void;
+
+    public getName(): string {
+        return this.name;
+    }
 }
 
 class SuccessFailureProcessor extends Processor {
@@ -89,7 +93,7 @@ class Main {
         this.processors.forEach(processor => {
             // Send event when the processor starts
             this.mediator.notifyStateChange({
-                name: processor.name,
+                name: processor.getName(), // Using getter method
                 message: 'Starting execution'
             });
 
@@ -97,7 +101,7 @@ class Main {
 
             // Send event when the processor finishes
             this.mediator.notifyStateChange({
-                name: processor.name,
+                name: processor.getName(), // Using getter method
                 message: 'Finished execution'
             });
         });
@@ -106,5 +110,3 @@ class Main {
 
 const main = new Main();
 main.executeProcessors();
-
-
