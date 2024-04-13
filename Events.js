@@ -86,12 +86,25 @@ class Main {
     }
 
     executeProcessors() {
-        this.processors.forEach(processor => processor.execute());
+        this.processors.forEach(processor => {
+            // Send event when the processor starts
+            this.mediator.notifyStateChange({
+                name: processor.name,
+                message: 'Starting execution'
+            });
+
+            processor.execute();
+
+            // Send event when the processor finishes
+            this.mediator.notifyStateChange({
+                name: processor.name,
+                message: 'Finished execution'
+            });
+        });
     }
 }
 
 const main = new Main();
 main.executeProcessors();
-
 
 
