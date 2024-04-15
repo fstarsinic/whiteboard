@@ -84,7 +84,7 @@ export class RandomEventProcessor extends Processor {
 
 import { EventMediator } from './EventMediator';
 import { EventMonitor } from './EventMonitor';
-import { SuccessFailureProcessor, RandomEventProcessor } from './Processor';
+import { Processor, SuccessFailureProcessor, RandomEventProcessor } from './Processor';
 
 class Main {
     private mediator: EventMediator;
@@ -100,12 +100,27 @@ class Main {
     }
 
     executeProcessors() {
-        this.processors.forEach(processor => processor.execute());
+        this.processors.forEach(processor => {
+            // Notify the start of execution
+            this.mediator.notifyStateChange({
+                name: processor.getName(),
+                message: 'Starting execution'
+            });
+
+            processor.execute();
+
+            // Notify the end of execution
+            this.mediator.notifyStateChange({
+                name: processor.getName(),
+                message: 'Finished execution'
+            });
+        });
     }
 }
 
 const main = new Main();
 main.executeProcessors();
+
 
 
 
