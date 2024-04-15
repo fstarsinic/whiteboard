@@ -26,11 +26,15 @@ export class ObservableState<T> {
 import { EventEmitter } from 'events';
 
 export class EventMediator extends EventEmitter {
+    constructor() {
+        super();
+        this.notifyStateChange = this.notifyStateChange.bind(this);
+    }
+
     notifyStateChange(state: any) {
         this.emit('stateChange', state);
     }
 }
-
 
 
 
@@ -119,12 +123,15 @@ export class SuccessFailureProcessor extends AbstractProcessor {
 
 
 
+
+
 import { EventMediator } from './EventMediator';
 import { EventMonitor } from './EventMonitor';
 
 import { AbstractProcessor } from './AbstractProcessor';
 import { SuccessFailureProcessor } from './SuccessFailureProcessor';
 import { RandomEventProcessor } from './RandomEventProcessor';
+
 
 class Main {
     private mediator: EventMediator;
@@ -134,8 +141,8 @@ class Main {
         this.mediator = new EventMediator();
         new EventMonitor(this.mediator); // Initialize and link the monitor
         this.processors = [
-            new SuccessFailureProcessor("Processor1", this.mediator.notifyStateChange.bind(this.mediator)),
-            new RandomEventProcessor("Processor2", this.mediator.notifyStateChange.bind(this.mediator))
+            new SuccessFailureProcessor("Processor1", this.mediator.notifyStateChange),
+            new RandomEventProcessor("Processor2", this.mediator.notifyStateChange)
         ];
     }
 
@@ -162,7 +169,6 @@ const main = new Main();
 main.executeProcessors();
 
 
-/*
 
 /*
 
@@ -175,6 +181,7 @@ participant EventMediator
 participant EventMonitor
 
 Main -> EventMediator : create()
+EventMediator -> EventMediator : bind notifyStateChange
 Main -> EventMonitor : create(mediator)
 Main -> EventMediator : connect(monitor.printState)
 
@@ -205,5 +212,5 @@ end
 
 @enduml
 
-*/
+
 */
