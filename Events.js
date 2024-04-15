@@ -1,18 +1,40 @@
 import { EventEmitter } from 'events';
 
-class EventMediator extends EventEmitter {
-    constructor() {
-        super();
+export class ObservableState<T> {
+    private state: T;
+    private onChange: (newState: T) => void;
+
+    constructor(initialState: T, onChange: (newState: T) => void) {
+        this.state = initialState;
+        this.onChange = onChange;
     }
 
+    updateState(newState: T) {
+        this.state = newState;
+        this.onChange(newState);
+    }
+
+    getState(): T {
+        return this.state;
+    }
+}
+
+
+
+import { EventEmitter } from 'events';
+
+export class EventMediator extends EventEmitter {
     notifyStateChange(state: any) {
         this.emit('stateChange', state);
     }
 }
 
-class EventMonitor {
+
+import { EventMediator } from './EventMediator';
+
+export class EventMonitor {
     constructor(mediator: EventMediator) {
-        mediator.on('stateChange', (state) => this.printState(state));
+        mediator.on('stateChange', this.printState);
     }
 
     printState(state: any) {
@@ -20,61 +42,49 @@ class EventMonitor {
     }
 }
 
-abstract class Processor {
-    protected name: string;
-    protected mediator: EventMediator;
 
-    constructor(name: string, mediator: EventMediator) {
-        this.name = name;
-        this.mediator = mediator;
+
+import { ObservableState } from './ObservableState';
+
+export abstract class Processor {
+    protected state: ObservableState<{ name: string; success_count: number; failure_count: number }>;
+
+    constructor(name: string, onChange: (state: { name: string; success_count: number; failure_count: number }) => void) {
+        this.state = new ObservableState({ name, success_count: 0, failure_count: 0 }, onChange);
     }
 
     abstract execute(): void;
-
-    public getName(): string {
-        return this.name;
-    }
 }
 
-class SuccessFailureProcessor extends Processor {
+export class SuccessFailureProcessor extends Processor {
     execute() {
-        let success_count = 0;
-        let failure_count = 0;
-
         for (let i = 0; i < 100; i++) {
             if (Math.random() > 0.5) {
-                success_count++;
+                this.state.updateState({ ...this.state.getState(), success_count: this.state.getState().success_count + 1 });
             } else {
-                failure_count++;
+                this.state.updateState({ ...this.state.getState(), failure_count: this.state.getState().failure_count + 1 });
             }
-            this.mediator.notifyStateChange({
-                name: this.name,
-                success_count: success_count,
-                failure_count: failure_count
-            });
         }
     }
 }
 
-class RandomEventProcessor extends Processor {
+export class RandomEventProcessor extends Processor {
     execute() {
-        let success_count = 0;
-        let failure_count = 0;
-
-        for (let i = 0; i < 50; i++) { // Different loop count for variety
-            if (Math.random() > 0.7) { // Different probability
-                success_count++;
+        for (let i = 0; i < 50; i++) {
+            if (Math.random() > 0.7) {
+                this.state.updateState({ ...this.state.getState(), success_count: this.state.getState().success_count + 1 });
             } else {
-                failure_count++;
+                this.state.updateState({ ...this.state.getState(), failure_count: this.state.getState().failure_count + 1 });
             }
-            this.mediator.notifyStateChange({
-                name: this.name,
-                success_count: success_count,
-                failure_count: failure_count
-            });
         }
     }
 }
+
+
+
+import { EventMediator } from './EventMediator';
+import { EventMonitor } from './EventMonitor';
+import { SuccessFailureProcessor, RandomEventProcessor } from './Processor';
 
 class Main {
     private mediator: EventMediator;
@@ -84,29 +94,57 @@ class Main {
         this.mediator = new EventMediator();
         new EventMonitor(this.mediator); // Initialize and link the monitor
         this.processors = [
-            new SuccessFailureProcessor("Processor1", this.mediator),
-            new RandomEventProcessor("Processor2", this.mediator)
+            new SuccessFailureProcessor("Processor1", this.mediator.notifyStateChange.bind(this.mediator)),
+            new RandomEventProcessor("Processor2", this.mediator.notifyStateChange.bind(this.mediator))
         ];
     }
 
     executeProcessors() {
-        this.processors.forEach(processor => {
-            // Send event when the processor starts
-            this.mediator.notifyStateChange({
-                name: processor.getName(), // Using getter method
-                message: 'Starting execution'
-            });
-
-            processor.execute();
-
-            // Send event when the processor finishes
-            this.mediator.notifyStateChange({
-                name: processor.getName(), // Using getter method
-                message: 'Finished execution'
-            });
-        });
+        this.processors.forEach(processor => processor.execute());
     }
 }
+
+const main = new Main();
+main.executeProcessors();
+
+
+
+import { ObservableState } from './ObservableState';
+
+export abstract class Processor {
+    protected state: ObservableState<{ name: string; success_count: number; failure_count: number }>;
+
+    constructor(name: string, onChange: (state: { name: string; success_count: number; failure_count: number }) => void) {
+        this.state = new ObservableState({ name, success_count: 0, failure_count: 0 }, onChange);
+    }
+
+    abstract execute(): void;
+}
+
+export class SuccessFailureProcessor extends Processor {
+    execute() {
+        for (let i = 0; i < 100; i++) {
+            if (Math.random() > 0.5) {
+                this.state.updateState({ ...this.state.getState(), success_count: this.state.getState().success_count + 1 });
+            } else {
+                this.state.updateState({ ...this.state.getState(), failure_count: this.state.getState().failure_count + 1 });
+            }
+        }
+    }
+}
+
+export class RandomEventProcessor extends Processor {
+    execute() {
+        for (let i = 0; i < 50; i++) {
+            if (Math.random() > 0.7) {
+                this.state.updateState({ ...this.state.getState(), success_count: this.state.getState().success_count + 1 });
+            } else {
+                this.state.updateState({ ...this.state.getState(), failure_count: this.state.getState().failure_count + 1 });
+            }
+        }
+    }
+}
+
 
 const main = new Main();
 main.executeProcessors();
