@@ -110,3 +110,33 @@ class Main {
 
 const main = new Main();
 main.executeProcessors();
+
+/*
+@startuml
+participant Main
+participant SuccessFailureProcessor
+participant RandomEventProcessor
+participant EventMediator
+participant EventMonitor
+
+Main -> SuccessFailureProcessor : create()
+Main -> RandomEventProcessor : create()
+Main -> EventMediator : create()
+Main -> EventMonitor : create(mediator)
+Main -> EventMediator : connect(monitor.printState)
+
+Main -> SuccessFailureProcessor : execute()
+loop Processing Loop
+    SuccessFailureProcessor -> EventMediator : notifyStateChange(state)
+    EventMediator -> EventMonitor : stateChange
+    EventMonitor -> EventMonitor : printState(state)
+end
+
+Main -> RandomEventProcessor : execute()
+loop Processing Loop
+    RandomEventProcessor -> EventMediator : notifyStateChange(state)
+    EventMediator -> EventMonitor : stateChange
+    EventMonitor -> EventMonitor : printState(state)
+end
+@enduml
+*/
