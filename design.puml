@@ -1,0 +1,39 @@
+@startuml
+
+participant Main
+participant SuccessFailureProcessor as "Processor1\n(SuccessFailureProcessor)"
+participant RandomEventProcessor as "Processor2\n(RandomEventProcessor)"
+participant EventMediator
+participant EventMonitor
+
+Main -> EventMediator : create()
+EventMediator -> EventMediator : bind notifyStateChange
+Main -> EventMonitor : create(mediator)
+Main -> EventMediator : connect(monitor.printState)
+
+Main -> SuccessFailureProcessor : create(initialState = {name, success_count: 0, failure_count: 0})
+Main -> RandomEventProcessor : create(initialState = {name, success_count: 0, failure_count: 0, transformed: 0})
+
+group Execution of Processor1
+    Main -> EventMediator : notifyStateChange({name: "Processor1", message: "Starting execution"})
+    Main -> SuccessFailureProcessor : execute()
+    loop Processing Loop
+        SuccessFailureProcessor -> EventMediator : notifyStateChange(state)
+        EventMediator -> EventMonitor : stateChange
+        EventMonitor -> EventMonitor : printState(state)
+    end
+    Main -> EventMediator : notifyStateChange({name: "Processor1", message: "Finished execution"})
+end
+
+group Execution of Processor2
+    Main -> EventMediator : notifyStateChange({name: "Processor2", message: "Starting execution"})
+    Main -> RandomEventProcessor : execute()
+    loop Processing Loop
+        RandomEventProcessor -> EventMediator : notifyStateChange(state)
+        EventMediator -> EventMonitor : stateChange
+        EventMonitor -> EventMonitor : printState(state)
+    end
+    Main -> EventMediator : notifyStateChange({name: "Processor2", message: "Finished execution"})
+end
+
+@enduml
