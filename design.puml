@@ -1,40 +1,43 @@
 @startuml
 
-participant Main
-participant SuccessFailureProcessor as "Processor1\n(SuccessFailureProcessor)"
-participant RandomEventProcessor as "Processor2\n(RandomEventProcessor)"
+participant Main1 as "Main Module 1"
+participant Main2 as "Main Module 2"
+participant SuccessFailureProcessor as "Processor1"
+participant RandomEventProcessor as "Processor2"
 participant EventMediator
 participant EventMonitor
 database Redis
 
-Main -> EventMediator : create()
-EventMediator -> EventMediator : bind notifyStateChange
-Main -> EventMonitor : create(mediator)
-Main -> EventMediator : connect(monitor.updateToRedis)
+Main1 -> EventMediator : create()
+Main2 -> EventMediator : create()
 
-Main -> SuccessFailureProcessor : create(initialState = {name, success_count: 0, failure_count: 0})
-Main -> RandomEventProcessor : create(initialState = {name, success_count: 0, failure_count: 0, transformed: 0})
+Main1 -> EventMonitor : create(mediator)
+EventMediator -> EventMonitor : setMonitor
+EventMediator -> EventMediator : bind notifyStateChange
+
+Main1 -> SuccessFailureProcessor : create(moduleId = "Module1")
+Main2 -> RandomEventProcessor : create(moduleId = "Module2")
 
 group Execution of Processor1
-    Main -> EventMediator : notifyStateChange({name: "Processor1", message: "Starting execution"})
-    Main -> SuccessFailureProcessor : execute()
+    Main1 -> EventMediator : notifyStateChange({moduleId: "Module1", message: "Starting execution"})
+    Main1 -> SuccessFailureProcessor : execute()
     loop Processing Loop
-        SuccessFailureProcessor -> EventMediator : notifyStateChange(state)
-        EventMediator -> EventMonitor : stateChange
-        EventMonitor -> Redis : updateToRedis(state)
+        SuccessFailureProcessor -> EventMediator : notifyStateChange({moduleId: "Module1", state: {...}})
+        EventMediator -> EventMonitor : updateToRedis({moduleId: "Module1", state: {...}})
+        EventMonitor -> Redis : store data
     end
-    Main -> EventMediator : notifyStateChange({name: "Processor1", message: "Finished execution"})
+    Main1 -> EventMediator : notifyStateChange({moduleId: "Module1", message: "Finished execution"})
 end
 
 group Execution of Processor2
-    Main -> EventMediator : notifyStateChange({name: "Processor2", message: "Starting execution"})
-    Main -> RandomEventProcessor : execute()
+    Main2 -> EventMediator : notifyStateChange({moduleId: "Module2", message: "Starting execution"})
+    Main2 -> RandomEventProcessor : execute()
     loop Processing Loop
-        RandomEventProcessor -> EventMediator : notifyStateChange(state)
-        EventMediator -> EventMonitor : stateChange
-        EventMonitor -> Redis : updateToRedis(state)
+        RandomEventProcessor -> EventMediator : notifyStateChange({moduleId: "Module2", state: {...}})
+        EventMediator -> EventMonitor : updateToRedis({moduleId: "Module2", state: {...}})
+        EventMonitor -> Redis : store data
     end
-    Main -> EventMediator : notifyStateChange({name: "Processor2", message: "Finished execution"})
+    Main2 -> EventMediator : notifyStateChange({moduleId: "Module2", message: "Finished execution"})
 end
 
 @enduml
