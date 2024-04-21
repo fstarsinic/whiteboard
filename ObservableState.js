@@ -7,17 +7,17 @@ class ObservableState {
         this.onChange = onChange;
     }
 
-    // Method to update state with a key-value pair
-    updateState(key: string, value: any) {
-        this.state[key] = value; // Direct assignment to the state
-        this.onChange(this.state); // Notify change
+    // Unified method for updating state (single or multiple key-value pairs)
+    updateState(updates: Record<string, any>) {
+        this.state = { ...this.state, ...updates }; // Merge the updates with the existing state
+        this.onChange(this.state); // Notify listeners about the updated state
     }
 
-    // Method to get a specific state value
+    // Method to get a specific state value or the entire state
     getState(key?: string): any {
         if (key) {
-            return this.state[key]; // Retrieve a specific key's value
+            return this.state[key]; // Retrieve the specific key's value
         }
-        return this.state; // Return the entire state if no key is provided
+        return this.state; // Return the entire state if no key is specified
     }
 }
