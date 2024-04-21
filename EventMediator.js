@@ -1,20 +1,28 @@
-import { EventEmitter } from 'events';
-
-class EventMediator extends EventEmitter {
-    private moduleStates: Map<string, any>;
+class EventMediator {
+    private listeners: Array<(state: Record<string, any>) => void>;
+    private state: Record<string, any>;
 
     constructor() {
-        super();
-        this.moduleStates = new Map();
+        this.listeners = [];
+        this.state = {}; // Initialize an empty state
     }
 
-    notifyStateChange(moduleId: string, state: any) {
-        // Update the state for the specific module
-        this.moduleStates.set(moduleId, state);
-        this.emit('stateChange', { moduleId, state });
+    // Method to notify listeners about state changes
+    notifyStateChange(module: string, updatedState: Record<string, any>) {
+        this.state = { ...this.state, ...updatedState }; // Merge the new state with the existing state
+        this.listeners.forEach((listener) => listener(this.state)); // Notify all listeners
     }
 
-    getState(moduleId: string) {
-        return this.moduleStates.get(moduleId);
+    // Method to get the entire state or a specific key's value
+    getState(key?: string): any {
+        if (key) {
+            return this.state[key]; // Return the value for a specific key
+        }
+        return this.state; // Return the entire state if no key is specified
+    }
+
+    // Method to add a listener for state changes
+    addListener(listener: (state: Record<string, any>) => void) {
+        this.listeners.push(listener);
     }
 }
