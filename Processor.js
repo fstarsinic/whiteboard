@@ -1,32 +1,26 @@
-import { EventMediator } from './EventMediator';
-import { ObservableState } from './ObservableState';
-
-export abstract class Processor {
-    protected state: ObservableState<any>;
-    protected moduleId: string;
+class Processor {
+    protected state: ObservableState;
     protected mediator: EventMediator;
+    protected moduleName: string;
 
-    constructor(moduleId: string, initialState: any, mediator: EventMediator) {
-        this.moduleId = moduleId;
+    constructor(moduleName: string, mediator: EventMediator) {
+        this.moduleName = moduleName;
         this.mediator = mediator;
-        this.state = new ObservableState(initialState, (newState) => {
-            this.mediator.notifyStateChange(this.moduleId, newState);
+        this.state = new ObservableState({}, (newState, module) => {
+            this.mediator.notifyStateChange(module, newState); // Notify with module context
         });
     }
 
-    abstract execute(): void;
-}
-
-export class SuccessFailureProcessor extends Processor {
-    execute() {
-        for (let i = 0; i < 100; i++) {
-            const currentState = this.state.getState();
-            const updatedState = {
-                ...currentState,
-                success_count: currentState.success_count + (Math.random() > 0.5 ? 1 : 0),
-                failure_count: currentState.failure_count + (Math.random() <= 0.5 ? 1 : 0),
-            };
-            this.state.updateState(updatedState);
-        }
+    // Retrieve the processor's name from a property or context
+    protected getProcessorName(): string {
+        return this.constructor.name; // Using the class name as the processor name
     }
+
+    // Method to update state with custom keys
+    updateProcessorState(key: string, value: any) {
+        const fullKey = `${this.moduleName}.${this.getProcessorName()}.${key}`; // Dynamic key
+        this.state.updateState(fullKey, value, this.moduleName); // Update with the complete key
+    }
+
+    abstract execute(): void; // Define a common method to be implemented by subclasses
 }
