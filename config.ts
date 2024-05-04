@@ -1,39 +1,34 @@
+import { Client } from '@opensearch-project/opensearch';
+
+// Assuming you have an OpenSearch client configured and connected
+const client: Client = new Client({
+  node: 'http://localhost:9200'
+});
+
 // Configuration structure with a generic properties dictionary
 type Config = {
   id: string;
   type: string;
-  properties: { [key: string]: any }; // Using an index signature for flexibility
+  properties: { [key: string]: any };
 };
 
-// Example data (simulated retrieval from OpenSearch)
-const globalConfig: Config = {
-  id: "global_config",
-  type: "global",
-  properties: {
-    logging_level: "info",
-    data_retention: "180 days",
-    default_archive_directory: "/var/log/archives",
-    maintenance_window: "Sunday 2-4 AM"
+// Function to fetch a configuration document by its ID from a specific index
+async function fetchConfig(id: string, index: string): Promise<Config> {
+  try {
+    const result = await client.get({
+      index: index,
+      id: id
+    });
+    return {
+      id: result.body._id,
+      type: result.body._source.type,
+      properties: result.body._source.properties
+    };
+  } catch (error) {
+    console.error(`Failed to fetch config for ID ${id}:`, error);
+    throw error; // Re-throw to handle it in caller
   }
-};
-
-const serverConfig: Config = {
-  id: "server1",
-  type: "server",
-  properties: {
-    logging_level: "warning",
-    maintenance_window: "Saturday 1-3 AM"
-  }
-};
-
-const appConfig: Config = {
-  id: "XYZ",
-  type: "application",
-  properties: {
-    logging_level: "debug",
-    archive_dirs: ["/app/XYZ/archives"]
-  }
-};
+}
 
 // Function to merge configurations, handling arbitrary properties
 function mergeConfigs(...configs: Config[]): { [key: string]: any } {
@@ -48,7 +43,19 @@ function mergeConfigs(...configs: Config[]): { [key: string]: any } {
   return mergedProperties;
 }
 
-// Merging the configurations
-const finalConfig = mergeConfigs(globalConfig, serverConfig, appConfig);
+// Main function to read and merge configurations
+async function main() {
+  try {
+    const globalConfig = await fetchConfig("global_config", "config_index");
+    const serverConfig = await fetchConfig("server1", "config_index");
+    const appConfig = await fetchConfig("XYZ", "config_index");
 
-console.log(finalConfig);
+    const mergedConfig = mergeConfigs(globalConfig, serverConfig, appConfig);
+    console.log("Merged Configuration Output:");
+    console.log(mergedConfig);
+  } catch (error) {
+    console.error("Error in configuration processing:", error);
+  }
+}
+
+main();
