@@ -1,18 +1,11 @@
-type ConfigProperties = {
-  logging_level?: string;
-  data_retention?: string;
-  default_archive_directory?: string;
-  maintenance_window?: string;
-  archive_dirs?: string[];
-};
-
+// Configuration structure with a generic properties dictionary
 type Config = {
   id: string;
   type: string;
-  properties: ConfigProperties;
+  properties: { [key: string]: any }; // Using an index signature for flexibility
 };
 
-// Simulated data retrieval from OpenSearch
+// Example data (simulated retrieval from OpenSearch)
 const globalConfig: Config = {
   id: "global_config",
   type: "global",
@@ -42,15 +35,20 @@ const appConfig: Config = {
   }
 };
 
-function mergeConfigs(global: ConfigProperties, server: ConfigProperties, app: ConfigProperties): ConfigProperties {
-  return {
-    ...global,
-    ...server,
-    ...app
-  };
+// Function to merge configurations, handling arbitrary properties
+function mergeConfigs(...configs: Config[]): { [key: string]: any } {
+  const mergedProperties = {};
+
+  configs.forEach(config => {
+    Object.keys(config.properties).forEach(key => {
+      mergedProperties[key] = config.properties[key]; // Later properties override earlier ones
+    });
+  });
+
+  return mergedProperties;
 }
 
-// Parse and merge configurations
-const finalConfig = mergeConfigs(globalConfig.properties, serverConfig.properties, appConfig.properties);
+// Merging the configurations
+const finalConfig = mergeConfigs(globalConfig, serverConfig, appConfig);
 
 console.log(finalConfig);
