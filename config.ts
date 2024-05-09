@@ -14,8 +14,10 @@ var config = {
         "logging_level": "warning",
         "applications": [
             { "application": "ASN",
+                "args": ["-f", "schedule", "-v"],
                 "distribution_strategy": { "type": "round-robin" } },
             { "application": "BGP",
+                "args": ["-f", "schedule", "-v"],
                 "distribution_strategy": { "type": "round-robin" }
             }
         ],
@@ -27,11 +29,14 @@ var config = {
         "logging_level": "warning",
         "applications": [
             { "application": "ASN",
+                "args": ["-f", "schedule", "-v"],
                 "distribution_strategy": { "type": "regex", "pattern": ".*[13579]$" } },
             { "application": "BGP",
+                "args": ["-f", "schedule", "-v"],
                 "distribution_strategy": { "type": "round-robin" }
             },
             { "application": "CVE",
+                "args": ["-f", "schedule", "-v"],
                 "distribution_strategy": { "type": "round-robin" }
             }
         ],
@@ -43,8 +48,10 @@ var config = {
         "logging_level": "warning",
         "applications": [
             { "application": "ASN",
+                "args": ["-f", "schedule", "-v"],
                 "distribution_strategy": { "type": "regex", "pattern": ".*[02468]$" } },
             { "application": "BGP",
+                "args": ["-f", "schedule", "-v"],
                 "distribution_strategy": { "type": "round-robin" }
             }
         ],
