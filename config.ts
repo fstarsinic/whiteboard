@@ -1,61 +1,120 @@
-import { Client } from '@opensearch-project/opensearch';
-
-// Assuming you have an OpenSearch client configured and connected
-const client: Client = new Client({
-  node: 'http://localhost:9200'
-});
-
-// Configuration structure with a generic properties dictionary
-type Config = {
-  id: string;
-  type: string;
-  properties: { [key: string]: any };
+// Configuration storage (simulated database)
+var config = {
+    "global_config": {
+        "id": "global_config",
+        "type": "global",
+        "logging_level": "info",
+        "data_retention": "180 days",
+        "archive_dirs": ["/opt/css"],
+        "maintenance_window": "Sunday 2-4 AM"
+    },
+    "server1": {
+        "id": "server1",
+        "type": "server",
+        "logging_level": "warning",
+        "applications": [
+            { "application": "ASN",
+                "distribution_strategy": { "type": "round-robin" } },
+            { "application": "BGP",
+                "distribution_strategy": { "type": "round-robin" }
+            }
+        ],
+        "maintenance_window": "Saturday 1-3 AM"
+    },
+    "server2": {
+        "id": "server2",
+        "type": "server",
+        "logging_level": "warning",
+        "applications": [
+            { "application": "ASN",
+                "distribution_strategy": { "type": "regex", "pattern": ".*[13579]$" } },
+            { "application": "BGP",
+                "distribution_strategy": { "type": "round-robin" }
+            },
+            { "application": "CVE",
+                "distribution_strategy": { "type": "round-robin" }
+            }
+        ],
+        "maintenance_window": "Saturday 1-3 AM"
+    },
+    "server3": {
+        "id": "server3",
+        "type": "server",
+        "logging_level": "warning",
+        "applications": [
+            { "application": "ASN",
+                "distribution_strategy": { "type": "regex", "pattern": ".*[02468]$" } },
+            { "application": "BGP",
+                "distribution_strategy": { "type": "round-robin" }
+            }
+        ],
+        "maintenance_window": "Saturday 1-3 AM"
+    },
+    "ASN": {
+        "id": "ASN",
+        "type": "application",
+        "logging_level": "debug",
+        "archive_dirs": ["/app/ASN/archives"]
+    },
+    "BGP": {
+        "id": "BGP",
+        "type": "application",
+        "logging_level": "info" // Inherits 'archive_dirs' from global
+    }
 };
-
-// Function to fetch a configuration document by its ID from a specific index
-async function fetchConfig(id: string, index: string): Promise<Config> {
-  try {
-    const result = await client.get({
-      index: index,
-      id: id
-    });
-    return {
-      id: result.body._id,
-      type: result.body._source.type,
-      properties: result.body._source.properties
-    };
-  } catch (error) {
-    console.error(`Failed to fetch config for ID ${id}:`, error);
-    throw error; // Re-throw to handle it in caller
-  }
+// Methods to retrieve configurations
+function getGlobalConfig() {
+    return config["global_config"];
 }
-
-// Function to merge configurations, handling arbitrary properties
-function mergeConfigs(...configs: Config[]): { [key: string]: any } {
-  const mergedProperties = {};
-
-  configs.forEach(config => {
-    Object.keys(config.properties).forEach(key => {
-      mergedProperties[key] = config.properties[key]; // Later properties override earlier ones
-    });
-  });
-
-  return mergedProperties;
+function getServerConfig(serverId) {
+    return config[serverId];
 }
-
-// Main function to read and merge configurations
-async function main() {
-  try {
-    const globalConfig = await fetchConfig("global_config", "config_index");
-    const serverConfig = await fetchConfig("server1", "config_index");
-    const appConfig = await fetchConfig("XYZ", "config_index");
-
-    const mergedConfig = mergeConfigs(globalConfig, serverConfig, appConfig);
-    console.log("Merged Configuration Output:");
-    console.log(mergedConfig);
-  } catch (error) {
-    console.error("Error in configuration processing:", error);
-  }
+function getApplicationConfig(serverId, appId) {
+    var mergedConfig = {};
+    // Merge global config
+    Object.assign(mergedConfig, getGlobalConfig());
+    // Retrieve server config and merge if the application is listed
+    var serverConfig = getServerConfig(serverId);
+    if (serverConfig && serverConfig.applications) {
+        Object.assign(mergedConfig, serverConfig);
+        // Find and merge specific application configurations from the server
+        var appDetails = serverConfig.applications.find(function (app) { return app.application === appId; });
+        if (appDetails) {
+            Object.assign(mergedConfig, appDetails);
+        }
+    }
+    // Merge application config
+    var appConfig = config[appId];
+    if (appConfig) {
+        Object.assign(mergedConfig, appConfig);
+    }
+    return mergedConfig;
 }
-
+// Enhanced main function to demonstrate configuration retrieval and display
+function main() {
+    var serverId = "server1";
+    var appId = "BGP";
+    var finalConfig = getApplicationConfig(serverId, appId);
+    console.log("Final configuration for Server: ".concat(serverId, ", Application: ").concat(appId, ":"));
+    console.log(finalConfig);
+    // Retrieve server configuration
+    var serverConfig = getServerConfig(serverId);
+    console.log("Server configuration for ".concat(serverId, ":"));
+    console.log(serverConfig);
+    // Retrieve and display final merged application configuration
+    finalConfig = getApplicationConfig(serverId, appId);
+    console.log("Final configuration for Server: ".concat(serverId, ", Application: ").concat(appId, ":"));
+    console.log(finalConfig);
+    serverId = "server2";
+    appId = "ASN";
+    // Retrieve server configuration
+    serverConfig = getServerConfig(serverId);
+    console.log("Server configuration for ".concat(serverId, ":"));
+    console.log(serverConfig);
+    // Retrieve server configuration
+    serverConfig = getServerConfig(serverId);
+    console.log("Server configuration for ".concat(serverId, ":"));
+    console.log("Final configuration for Server: ".concat(serverId, ", Application: ").concat(appId, ":"));
+    console.log(finalConfig);
+}
 main();
