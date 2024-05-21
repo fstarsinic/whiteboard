@@ -1,64 +1,140 @@
-interface Executor {
-    initialize(args: any): void;
-    execute(): Promise<void>;
+import fetch from 'node-fetch';
+import minimist from 'minimist';
+
+interface State {
+  apiKey: string;
+  startDate: string;
+  endDate: string;
+  channel: string;
 }
 
-class RESTMain implements Executor {
-    private url: string;
-    private method: 'GET' | 'POST' | 'PUT' | 'DELETE';
-    private headers: HeadersInit;
-    private body: any;
-    private username: string;
-    private password: string;
+// Parse command-line arguments
+const args = minimist(process.argv.slice(2));
 
-    initialize(args: { url: string; method: 'GET' | 'POST' | 'PUT' | 'DELETE'; headers?: HeadersInit; body?: any; username?: string; password?: string }): void {
-        this.url = args.url;
-        this.method = args.method;
-        this.headers = args.headers || {};
-        this.body = args.body || null;
-        this.username = args.username || '';
-        this.password = args.password || '';
+// Initialize state with command-line arguments
+const state: State = {
+  apiKey: args.apiKey || '',
+  startDate: args.startDate || '',
+  endDate: args.endDate || '',
+  channel: args.channel || '',
+};
 
-        if (this.username && this.password) {
-            const encodedCredentials = btoa(`${this.username}:${this.password}`);
-            this.headers = {
-                ...this.headers,
-                'Authorization': `Basic ${encodedCredentials}`
-            };
-        }
+// Define the URL and headers
+const url = 'https://example.com/api';  // Replace with your actual URL
+const headers = {
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${state.apiKey}`,
+};
+
+// Define the POST data
+const postData = {
+  startDate: state.startDate,
+  endDate: state.endDate,
+  channel: state.channel,
+};
+
+async function makePostRequest() {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(postData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    async execute(): Promise<void> {
-        try {
-            let response: Response;
-
-            const requestOptions: RequestInit = {
-                method: this.method,
-                headers: this.headers,
-                body: this.body ? JSON.stringify(this.body) : null,
-            };
-
-            response = await fetch(this.url, requestOptions);
-
-            if (!response.ok) {
-                throw new Error(`Network response was not ok: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            // Display the results (for now)
-            console.log(data);
-        } catch (error) {
-            console.error('Error executing request:', error);
-        }
-    }
+    const data = await response.json();
+    console.log('Response:', data);
+  } catch (error) {
+    console.error('Error:', error);
+  }
 }
 
-// Example usage:
-const executor: Executor = new RESTMain();
-executor.initialize({
-    url: 'https://jsonplaceholder.typicode.com/posts/1',
-    method: 'GET',
-    username: 'myUsername',
-    password: 'myPassword'
-});
-executor.execute();
+makePostRequest();
+
+
+//npx ts-node postRequest.ts --apiKey=your_api_key --startDate=2024-01-01 --endDate=2024-01-31 --channel=your_channel
+
+
+import fetch from 'node-fetch';
+import minimist from 'minimist';
+
+interface State {
+  apiKey: string;
+  startDate: string;
+  endDate: string;
+  channel: string;
+}
+
+// Parse command-line arguments
+const args = minimist(process.argv.slice(2));
+
+// Initialize state with command-line arguments
+const state: State = {
+  apiKey: args.apiKey || '',
+  startDate: args.startDate || '',
+  endDate: args.endDate || '',
+  channel: args.channel || '',
+};
+
+// Define the URL and headers
+const url = 'https://example.com/api';  // Replace with your actual URL
+const headers = {
+  'Content-Type': 'application/json',
+};
+
+// Define the POST data
+const postData = {
+  apiKey: state.apiKey,
+  startDate: state.startDate,
+  endDate: state.endDate,
+  channel: state.channel,
+};
+
+async function makePostRequest() {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(postData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Response:', data);
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+makePostRequest();
+
+
+//npx ts-node postRequest.ts --apiKey=your_api_key --startDate=2024-01-01 --endDate=2024-01-31 --channel=your_channel
+
+/*
+curl -X POST https://example.com/api \
+     -H "Content-Type: application/json" \
+     -d '{
+           "apiKey": "your_api_key",
+           "startDate": "2024-01-01",
+           "endDate": "2024-01-31",
+           "channel": "your_channel"
+         }'
+
+
+
+curl -X POST https://example.com/api \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer your_api_key" \
+     -d '{
+           "startDate": "2024-01-01",
+           "endDate": "2024-01-31",
+           "channel": "your_channel"
+         }'
+*/
