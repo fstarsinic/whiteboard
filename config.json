@@ -1,0 +1,186 @@
+{
+  "took" : 2,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 1,
+    "successful" : 1,
+    "skipped" : 0,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : {
+      "value" : 8,
+      "relation" : "eq"
+    },
+    "max_score" : 1.0,
+    "hits" : [
+      {
+        "_index" : "hwkconfig-sched-sync",
+        "_id" : "CVE1",
+        "_score" : 1.0,
+        "_source" : {
+          "id" : "CVE1",
+          "module" : "CVE",
+          "type" : "Executor",
+          "language" : "typescript",
+          "cron" : "0 */4 * * *",
+          "enabled" : true,
+          "maintenance_window" : "Saturday 1-3 AM",
+          "distribution_strategy" : {
+            "type" : "regex",
+            "value" : ".*"
+          },
+          "archive_dirs" : [
+            "/"
+          ]
+        }
+      },
+      {
+        "_index" : "hwkconfig-sched-sync",
+        "_id" : "CVE2",
+        "_score" : 1.0,
+        "_source" : {
+          "id" : "CVE2",
+          "module" : "CVE",
+          "type" : "Executor",
+          "language" : "typescript",
+          "cron" : "0 */2 * * *",
+          "enabled" : true,
+          "maintenance_window" : "Saturday 1-3 AM",
+          "distribution_strategy" : {
+            "type" : "regex",
+            "value" : ".*"
+          },
+          "archive_dirs" : [
+            "/"
+          ]
+        }
+      },
+      {
+        "_index" : "hwkconfig-sched-sync",
+        "_id" : "BGP",
+        "_score" : 1.0,
+        "_source" : {
+          "id" : "BGP",
+          "module" : "BGP",
+          "type" : "Executor",
+          "language" : "typescript",
+          "cron" : "0 */4 * * *",
+          "enabled" : true,
+          "maintenance_window" : "Saturday 1-3 AM",
+          "distribution_strategy" : {
+            "type" : "regex",
+            "value" : ".*"
+          },
+          "archive_dirs" : [
+            "/"
+          ]
+        }
+      },
+      {
+        "_index" : "hwkconfig-sched-sync",
+        "_id" : "ASN2",
+        "_score" : 1.0,
+        "_source" : {
+          "id" : "ASN2",
+          "module" : "ASN",
+          "type" : "Executor",
+          "description" : "Handles all ASNs that end in 6-9",
+          "language" : "typescript",
+          "cron" : "0 */4 * * *",
+          "enabled" : true,
+          "args" : [
+            "-f",
+            "schedule",
+            "-v"
+          ],
+          "maintenance_window" : "Saturday 1-3 AM",
+          "distribution_strategy" : {
+            "type" : "regex",
+            "value" : "[6-9]$"
+          },
+          "archive_dirs" : [
+            "/"
+          ]
+        }
+      },
+      {
+        "_index" : "hwkconfig-sched-sync",
+        "_id" : "ASN1",
+        "_score" : 1.0,
+        "_source" : {
+          "id" : "ASN1",
+          "module" : "ASN",
+          "type" : "Executor",
+          "description" : "Handles all ASNs that end in 0-5",
+          "language" : "typescript",
+          "cron" : "0 */4 * * *",
+          "enabled" : true,
+          "args" : [
+            "-f",
+            "schedule",
+            "-v"
+          ],
+          "maintenance_window" : "Saturday 1-3 AM",
+          "distribution_strategy" : {
+            "type" : "regex",
+            "value" : "[0-5]$"
+          },
+          "archive_dirs" : [
+            "/"
+          ]
+        }
+      },
+      {
+        "_index" : "hwkconfig-sched-sync",
+        "_id" : "global_config",
+        "_score" : 1.0,
+        "_source" : {
+          "id" : "global_config",
+          "type" : "global",
+          "properties" : {
+            "logging_level" : "info",
+            "data_retention" : "180 days",
+            "default_archive_directory" : "/opt/css",
+            "maintenance_window" : "Sunday 2-4 AM"
+          }
+        }
+      },
+      {
+        "_index" : "hwkconfig-sched-sync",
+        "_id" : "dlawoscs03",
+        "_score" : 1.0,
+        "_source" : {
+          "id" : "dlawoscs03",
+          "hostname" : "dlawoscs03.r1-core.r1.aig.net",
+          "type" : "server",
+          "logging_level" : "warning",
+          "applications" : [
+            "ASN2",
+            "BGP",
+            "CVE2"
+          ],
+          "maintenance_window" : "Saturday 1-3 AM"
+        }
+      },
+      {
+        "_index" : "hwkconfig-sched-sync",
+        "_id" : "dlawoscs04",
+        "_score" : 1.0,
+        "_source" : {
+          "id" : "dlawoscs04",
+          "hostname" : "dlawoscs04.r1-core.r1.aig.net",
+          "type" : "server",
+          "logging_level" : "warning",
+          "applications" : [
+            "ASN2",
+            "BGP",
+            "CVE1",
+            "LMNOP"
+          ],
+          "maintenance_window" : "Saturday 1-3 AM"
+        }
+      }
+    ]
+  }
+}
