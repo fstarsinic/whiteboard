@@ -1,0 +1,67 @@
+{
+    "activity": {
+        "first": 1719391412000,
+        "last": 1719406934000
+    },
+    "last_updated": 1719406934000,
+    "uid": "32cbbf61af103e1f0265f445c368c0c7",
+    "data": {
+        "breach_alert": {
+            "date_of_information": 1719187200000,
+            "confidence": {
+                "level": "medium",
+                "description": "The intelligence picture is developing, cannot be corroborated or has some limitations."
+            },
+            "intel_requirements": [
+                "1.1.1",
+                "1.2.2",
+                "4.2.3",
+                "4.2.5",
+                "4.2.6",
+                "5.2.1",
+                "5.2.9",
+                "5.2.11",
+                "5.5.3",
+                "5.5.4",
+                "6.1.7.1",
+                "6.2.8",
+                "6.2.8.3",
+                "6.1.7"
+            ],
+            "released_at": 1719391412000,
+            "title": "Concisa Pavimentação e Terraplenagem Ltda. possibly compromised by actor/group Qiulong on Jun 24, 2024",
+            "victim": {
+                "name": "Concisa Pavimentação e Terraplenagem Ltda.",
+                "industries": [
+                    {
+                        "industry": "Engineering and construction industry",
+                        "sector": "Real estate sector"
+                    }
+                ],
+                "urls": [
+                    "https://www.concisa.eng.br"
+                ],
+                "country": "Brazil",
+                "revenue": "N/A",
+                "region": "South America"
+            },
+            "sources": [
+                {
+                    "url": "https://titan.intel471.com/post_thread/a908885b90319c9f472cbcf4f9de0fb4?post_uid=8487730f9f49c61a15ac4db66d6549dd",
+                    "source_type": "Forum Post",
+                    "date": 1719187200000,
+                    "title": "www.concisa.eng.br",
+                    "type": "internal"
+                }
+            ],
+            "summary": "<p>On June 24, 2024, the operator or operators behind the Qiulong ransomware-as-a-service (RaaS) affiliate program claimed the compromise of the Brazil-based construction company Concisa Pavimentação e Terraplenagem Ltda. at the concisa.eng.br website. The blog operator or operators posted screenshots of data allegedly exfiltrated from the victim entity as proof of the claim.</p>",
+            "actor_or_group": "Qiulong"
+        },
+        "entities": [
+            {
+                "type": "Handle",
+                "value": "Qiulong"
+            }
+        ]
+    }
+}
