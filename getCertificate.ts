@@ -1,4 +1,5 @@
-import * as https from 'https';
+import * as tls from 'tls';
+import * as url from 'url';
 
 interface CertificateDetails {
   subject: string;
@@ -8,16 +9,16 @@ interface CertificateDetails {
   fingerprint: string;
 }
 
-function getCertificate(url: string): Promise<CertificateDetails> {
+function getCertificate(targetUrl: string): Promise<CertificateDetails> {
   return new Promise((resolve, reject) => {
+    const parsedUrl = url.parse(targetUrl);
     const options = {
-      hostname: url,
+      host: parsedUrl.hostname,
       port: 443,
-      method: 'GET',
+      servername: parsedUrl.hostname,
     };
 
-    const req = https.request(options, (res) => {
-      const socket = res.socket;
+    const socket = tls.connect(options, () => {
       const certificate = socket.getPeerCertificate();
       if (!certificate || Object.keys(certificate).length === 0) {
         reject(new Error('The website did not provide a certificate.'));
@@ -30,18 +31,17 @@ function getCertificate(url: string): Promise<CertificateDetails> {
           fingerprint: certificate.fingerprint,
         });
       }
+      socket.end();
     });
 
-    req.on('error', (e) => {
+    socket.on('error', (e) => {
       reject(e);
     });
-
-    req.end();
   });
 }
 
 // Example usage
-getCertificate('www.example.com')
+getCertificate('https://www.example.com')
   .then((certificate) => {
     console.log('Certificate details:', certificate);
   })
