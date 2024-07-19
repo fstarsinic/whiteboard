@@ -17,7 +17,8 @@ function getCertificate(url: string): Promise<CertificateDetails> {
     };
 
     const req = https.request(options, (res) => {
-      const certificate = res.connection.getPeerCertificate();
+      const socket = res.socket;
+      const certificate = socket.getPeerCertificate();
       if (!certificate || Object.keys(certificate).length === 0) {
         reject(new Error('The website did not provide a certificate.'));
       } else {
