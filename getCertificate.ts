@@ -18,20 +18,20 @@ function getCertificate(targetUrl: string): Promise<CertificateDetails> {
       servername: parsedUrl.hostname,
     };
 
-    const socket = tls.connect(options, () => {
-      const certificate = socket.getPeerCertificate();
-      if (!certificate || Object.keys(certificate).length === 0) {
-        reject(new Error('The website did not provide a certificate.'));
-      } else {
-        resolve({
-          subject: JSON.stringify(certificate.subject),
-          issuer: JSON.stringify(certificate.issuer),
-          valid_from: certificate.valid_from,
-          valid_to: certificate.valid_to,
-          fingerprint: certificate.fingerprint,
-        });
-      }
-      socket.end();
+    const socket = tls.connect(options as tls.ConnectionOptions, () => {
+        const certificate = socket.getPeerCertificate();
+        if (!certificate || Object.keys(certificate).length === 0) {
+            reject(new Error('The website did not provide a certificate.'));
+        } else {
+            resolve({
+                subject: JSON.stringify(certificate.subject),
+                issuer: JSON.stringify(certificate.issuer),
+                valid_from: certificate.valid_from,
+                valid_to: certificate.valid_to,
+                fingerprint: certificate.fingerprint,
+            });
+        }
+        socket.end();
     });
 
     socket.on('error', (e) => {
