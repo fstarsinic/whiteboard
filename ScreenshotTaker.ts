@@ -1,9 +1,8 @@
-import puppeteer, { Browser, LaunchOptions } from 'puppeteer';
+import puppeteer, { Browser, PuppeteerLaunchOptions } from 'puppeteer';
 import { promises as fs } from 'fs';
 import { performance } from 'perf_hooks';
 
 interface ScreenshotTakerOptions {
-    headless?: boolean;
     viewportWidth?: number;
     viewportHeight?: number;
     timeout?: number;
@@ -52,6 +51,11 @@ class ScreenshotTaker {
             waitUntil: 'networkidle2',
             timeout: this.options.timeout || 30000,
         });
+
+        if (!response) {
+            throw new Error('Failed to load the page.');
+        }
+
         const finalUrl = response.url();
         await page.goto(finalUrl, { waitUntil: 'networkidle2' });
         await page.screenshot({ path: this.filename, fullPage: true });
@@ -75,16 +79,16 @@ class ScreenshotTaker {
         console.log(`Time taken: ${timeTaken.toFixed(2)} ms`);
     }
 
-    public static async createBrowser(options?: LaunchOptions): Promise<Browser> {
+    public static async createBrowser(options?: PuppeteerLaunchOptions): Promise<Browser> {
         return await puppeteer.launch(options);
     }
 }
 
 // Example usage:
 async function main() {
-    const url = 'https://www.example.com';
+    const url = 'https://www.wellsfargo.com';
     const filename = 'example.png';
-    const browserOptions = { headless: true };
+    const browserOptions: PuppeteerLaunchOptions = { headless: true };
     const screenshotOptions: ScreenshotTakerOptions = {
         viewportWidth: 1280,
         viewportHeight: 720,
