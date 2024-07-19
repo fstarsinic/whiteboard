@@ -6,6 +6,7 @@ type ScreenshotTakerOptions = {
     viewportWidth?: number;
     viewportHeight?: number;
     timeout?: number;
+    maxMemoryUsageMB?: number; // New option to limit max memory usage
 };
 
 class ScreenshotTaker {
@@ -39,20 +40,20 @@ class ScreenshotTaker {
                 const request = response.request();
 
                 // Skip reading the buffer for preflight (OPTIONS) requests and redirects
-                if (request.method() === 'OPTIONS' || response.status() >= 300 && response.status() < 400) {
+                if (request.method() === 'OPTIONS' || (response.status() >= 300 && response.status() < 400)) {
                     return;
                 }
 
                 const buffer = await response.buffer();
                 totalBytes += buffer.length;
             } catch (err) {
-                console.log(`Error reading response buffer: ${err}`);
-                //console.error('Error reading response buffer:', err as Error);
+                console.error('Error reading response buffer:', err.message);
             }
         });
 
         const startCpuUsage = process.cpuUsage();
         const startTime = performance.now();
+        const startMemoryUsage = process.memoryUsage();
 
         // Navigate to the URL and take a screenshot
         const response = await page.goto(this.url, {
@@ -70,6 +71,7 @@ class ScreenshotTaker {
 
         const endTime = performance.now();
         const endCpuUsage = process.cpuUsage(startCpuUsage);
+        const endMemoryUsage = process.memoryUsage();
 
         await page.close();
 
@@ -80,11 +82,25 @@ class ScreenshotTaker {
         // Calculate the time taken to create the screenshot
         const timeTaken = endTime - startTime;
 
+        // Calculate memory usage difference
+        const memoryUsageDiff = {
+            rss: (endMemoryUsage.rss - startMemoryUsage.rss) / 1024 / 1024, // Convert to MB
+            heapTotal: (endMemoryUsage.heapTotal - startMemoryUsage.heapTotal) / 1024 / 1024,
+            heapUsed: (endMemoryUsage.heapUsed - startMemoryUsage.heapUsed) / 1024 / 1024,
+            external: (endMemoryUsage.external - startMemoryUsage.external) / 1024 / 1024,
+        };
+
         // Log the metrics
         console.log(`Total network bandwidth used: ${totalBytes} bytes`);
         console.log(`Screenshot size: ${screenshotSize} bytes`);
         console.log(`CPU usage: user ${endCpuUsage.user} µs, system ${endCpuUsage.system} µs`);
         console.log(`Time taken: ${timeTaken.toFixed(2)} ms`);
+        console.log(`Memory usage: ${JSON.stringify(memoryUsageDiff)} MB`);
+
+        // Check memory usage limit
+        if (this.options.maxMemoryUsageMB && endMemoryUsage.heapUsed / 1024 / 1024 > this.options.maxMemoryUsageMB) {
+            throw new Error(`Memory usage exceeded limit of ${this.options.maxMemoryUsageMB} MB`);
+        }
     }
 
     public static async createBrowser(options?: PuppeteerLaunchOptions): Promise<Browser> {
@@ -94,13 +110,14 @@ class ScreenshotTaker {
 
 // Example usage:
 async function main() {
-    const url = 'https://www.wellsfargo.com';
+    const url = 'https://www.example.com';
     const filename = 'example.png';
     const browserOptions: PuppeteerLaunchOptions = { headless: true };
     const screenshotOptions: ScreenshotTakerOptions = {
         viewportWidth: 1280,
         viewportHeight: 720,
         timeout: 30000,
+        maxMemoryUsageMB: 500, // Limit memory usage to 500 MB
     };
 
     const browser = await ScreenshotTaker.createBrowser(browserOptions);
