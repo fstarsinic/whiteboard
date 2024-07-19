@@ -2,11 +2,11 @@ import puppeteer, { Browser, PuppeteerLaunchOptions } from 'puppeteer';
 import { promises as fs } from 'fs';
 import { performance } from 'perf_hooks';
 
-interface ScreenshotTakerOptions {
+type ScreenshotTakerOptions = {
     viewportWidth?: number;
     viewportHeight?: number;
     timeout?: number;
-}
+};
 
 class ScreenshotTaker {
     private url: string;
@@ -36,10 +36,18 @@ class ScreenshotTaker {
         // Track network requests and responses
         page.on('response', async response => {
             try {
+                const request = response.request();
+
+                // Skip reading the buffer for preflight (OPTIONS) requests and redirects
+                if (request.method() === 'OPTIONS' || response.status() >= 300 && response.status() < 400) {
+                    return;
+                }
+
                 const buffer = await response.buffer();
                 totalBytes += buffer.length;
             } catch (err) {
-                console.error('Error reading response buffer:', err);
+                console.log(`Error reading response buffer: ${err}`);
+                //console.error('Error reading response buffer:', err as Error);
             }
         });
 
